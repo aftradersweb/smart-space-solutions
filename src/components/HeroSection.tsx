@@ -25,11 +25,13 @@ const HeroSection = () => {
         </div>
         <div className="hidden md:flex items-center gap-8 text-muted-foreground">
           <a href="#how" className="hover:text-primary transition-colors">آلية العمل</a>
-          <a href="#services" className="hover:text-primary transition-colors">الخدمات</a>
+          <Link to="/services" className="hover:text-primary transition-colors">الخدمات</Link>
           <a href="#features" className="hover:text-primary transition-colors">المميزات</a>
-          <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground">
-            تسجيل الدخول
-          </Button>
+          <Link to="/auth">
+            <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground">
+              تسجيل الدخول
+            </Button>
+          </Link>
         </div>
       </nav>
 
