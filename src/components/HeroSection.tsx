@@ -55,9 +55,11 @@ const HeroSection = () => {
               ابدأ الآن
               <ArrowLeft className="w-5 h-5 mr-2" />
             </Button>
-            <Button size="lg" variant="outline" className="border-border text-foreground hover:bg-muted font-medium text-lg px-8">
-              اكتشف المزيد
-            </Button>
+            <Link to="/services">
+              <Button size="lg" variant="outline" className="border-border text-foreground hover:bg-muted font-medium text-lg px-8">
+                اكتشف المزيد
+              </Button>
+            </Link>
           </div>
 
           {/* Stats */}
