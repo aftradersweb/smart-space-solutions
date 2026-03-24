@@ -1,6 +1,7 @@
 import heroImage from "@/assets/hero-warehouse.jpg";
 import { Button } from "@/components/ui/button";
 import { Warehouse, ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const HeroSection = () => {
   return (
