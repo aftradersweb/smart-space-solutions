@@ -1,6 +1,7 @@
 import heroImage from "@/assets/hero-warehouse.jpg";
 import { Button } from "@/components/ui/button";
 import { Warehouse, ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const HeroSection = () => {
   return (
@@ -24,11 +25,13 @@ const HeroSection = () => {
         </div>
         <div className="hidden md:flex items-center gap-8 text-muted-foreground">
           <a href="#how" className="hover:text-primary transition-colors">آلية العمل</a>
-          <a href="#services" className="hover:text-primary transition-colors">الخدمات</a>
+          <Link to="/services" className="hover:text-primary transition-colors">الخدمات</Link>
           <a href="#features" className="hover:text-primary transition-colors">المميزات</a>
-          <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground">
-            تسجيل الدخول
-          </Button>
+          <Link to="/auth">
+            <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground">
+              تسجيل الدخول
+            </Button>
+          </Link>
         </div>
       </nav>
 
@@ -52,9 +55,11 @@ const HeroSection = () => {
               ابدأ الآن
               <ArrowLeft className="w-5 h-5 mr-2" />
             </Button>
-            <Button size="lg" variant="outline" className="border-border text-foreground hover:bg-muted font-medium text-lg px-8">
-              اكتشف المزيد
-            </Button>
+            <Link to="/services">
+              <Button size="lg" variant="outline" className="border-border text-foreground hover:bg-muted font-medium text-lg px-8">
+                اكتشف المزيد
+              </Button>
+            </Link>
           </div>
 
           {/* Stats */}
