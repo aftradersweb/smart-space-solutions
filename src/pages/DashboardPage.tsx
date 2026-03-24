@@ -222,9 +222,11 @@ const OrdersTab = () => (
   <div>
     <div className="flex items-center justify-between mb-6">
       <h2 className="text-xl font-bold text-foreground">الطلبات</h2>
-      <Button className="bg-gradient-gold text-primary-foreground font-medium glow-gold hover:opacity-90">
-        <Plus className="w-4 h-4 ml-2" /> طلب تخزين جديد
-      </Button>
+      <Link to="/new-request">
+        <Button className="bg-gradient-gold text-primary-foreground font-medium glow-gold hover:opacity-90">
+          <Plus className="w-4 h-4 ml-2" /> طلب تخزين جديد
+        </Button>
+      </Link>
     </div>
     <div className="glass rounded-xl overflow-hidden">
       <table className="w-full">
