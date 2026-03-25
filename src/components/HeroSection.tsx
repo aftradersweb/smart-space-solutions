@@ -27,6 +27,7 @@ const HeroSection = () => {
           <a href="#how" className="hover:text-primary transition-colors">آلية العمل</a>
           <Link to="/services" className="hover:text-primary transition-colors">الخدمات</Link>
           <a href="#features" className="hover:text-primary transition-colors">المميزات</a>
+          <Link to="/contact" className="hover:text-primary transition-colors">تواصل معنا</Link>
           <Link to="/auth">
             <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground">
               تسجيل الدخول
