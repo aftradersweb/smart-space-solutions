@@ -92,7 +92,7 @@ const AuthPage = () => {
     <div className="min-h-screen bg-background flex">
       {/* Right side - Form */}
       <div className="flex-1 flex items-center justify-center p-6 md:p-12 overflow-y-auto">
-        <div className="w-full max-w-md py-8">
+        <div className={`w-full py-8 ${isLogin ? "max-w-md" : "max-w-2xl"}`}>
           <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-8 transition-colors">
             <ArrowLeft className="w-4 h-4" />
             العودة للرئيسية
@@ -144,23 +144,35 @@ const AuthPage = () => {
           <form onSubmit={handleSubmit} className="space-y-5">
             {!isLogin && (
               <>
-                {/* Name */}
-                <div>
-                  <Label className="text-foreground mb-2 block">
-                    {accountType === "company" ? "اسم الشركة" : "الاسم الكامل"}
-                  </Label>
-                  <Input
-                    value={form.name}
-                    onChange={(e) => update("name", e.target.value)}
-                    placeholder={accountType === "company" ? "مثال: شركة الأمان للتجارة" : "مثال: أحمد محمد"}
-                    className={fieldClass}
-                  />
-                  {errors.name && <p className="text-destructive text-sm mt-1">{errors.name}</p>}
+                {/* Row: Name + Phone */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-foreground mb-2 block">
+                      {accountType === "company" ? "اسم الشركة" : "الاسم الكامل"}
+                    </Label>
+                    <Input
+                      value={form.name}
+                      onChange={(e) => update("name", e.target.value)}
+                      placeholder={accountType === "company" ? "مثال: شركة الأمان للتجارة" : "مثال: أحمد محمد"}
+                      className={fieldClass}
+                    />
+                    {errors.name && <p className="text-destructive text-sm mt-1">{errors.name}</p>}
+                  </div>
+                  <div>
+                    <Label className="text-foreground mb-2 block">رقم الهاتف</Label>
+                    <Input
+                      value={form.phone}
+                      onChange={(e) => update("phone", e.target.value)}
+                      placeholder="+966 5XX XXX XXXX"
+                      className={fieldClass}
+                    />
+                    {errors.phone && <p className="text-destructive text-sm mt-1">{errors.phone}</p>}
+                  </div>
                 </div>
 
-                {/* Company-specific: Owner Name */}
+                {/* Company-specific: Owner Name + Commercial Reg */}
                 {accountType === "company" && (
-                  <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label className="text-foreground mb-2 block">اسم المالك</Label>
                       <Input
@@ -181,72 +193,58 @@ const AuthPage = () => {
                       />
                       {errors.commercialReg && <p className="text-destructive text-sm mt-1">{errors.commercialReg}</p>}
                     </div>
-                  </>
+                  </div>
                 )}
 
-                {/* Nationality */}
-                <div>
-                  <Label className="text-foreground mb-2 block">الجنسية</Label>
-                  <select
-                    value={form.nationality}
-                    onChange={(e) => update("nationality", e.target.value)}
-                    className={selectClass}
-                  >
-                    <option value="">اختر الجنسية</option>
-                    {NATIONALITIES.map((n) => (
-                      <option key={n} value={n}>{n}</option>
-                    ))}
-                  </select>
-                  {errors.nationality && <p className="text-destructive text-sm mt-1">{errors.nationality}</p>}
-                </div>
-
-                {/* Gender */}
-                <div>
-                  <Label className="text-foreground mb-2 block">الجنس</Label>
-                  <div className="flex gap-3">
-                    {[
-                      { value: "male", label: "ذكر" },
-                      { value: "female", label: "أنثى" },
-                    ].map((g) => (
-                      <button
-                        key={g.value}
-                        type="button"
-                        onClick={() => update("gender", g.value)}
-                        className={`flex-1 p-3 rounded-xl border-2 text-center font-medium transition-all ${
-                          form.gender === g.value
-                            ? "border-primary bg-primary/10 text-primary"
-                            : "border-border text-muted-foreground hover:border-muted-foreground/30"
-                        }`}
-                      >
-                        {g.label}
-                      </button>
-                    ))}
+                {/* Row: Nationality + Gender + ID */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-foreground mb-2 block">الجنسية</Label>
+                    <select
+                      value={form.nationality}
+                      onChange={(e) => update("nationality", e.target.value)}
+                      className={selectClass}
+                    >
+                      <option value="">اختر الجنسية</option>
+                      {NATIONALITIES.map((n) => (
+                        <option key={n} value={n}>{n}</option>
+                      ))}
+                    </select>
+                    {errors.nationality && <p className="text-destructive text-sm mt-1">{errors.nationality}</p>}
                   </div>
-                  {errors.gender && <p className="text-destructive text-sm mt-1">{errors.gender}</p>}
-                </div>
-
-                {/* ID / Passport */}
-                <div>
-                  <Label className="text-foreground mb-2 block">رقم الهوية / الجواز</Label>
-                  <Input
-                    value={form.idNumber}
-                    onChange={(e) => update("idNumber", e.target.value)}
-                    placeholder="مثال: 1234567890"
-                    className={fieldClass}
-                  />
-                  {errors.idNumber && <p className="text-destructive text-sm mt-1">{errors.idNumber}</p>}
-                </div>
-
-                {/* Phone */}
-                <div>
-                  <Label className="text-foreground mb-2 block">رقم الهاتف</Label>
-                  <Input
-                    value={form.phone}
-                    onChange={(e) => update("phone", e.target.value)}
-                    placeholder="+966 5XX XXX XXXX"
-                    className={fieldClass}
-                  />
-                  {errors.phone && <p className="text-destructive text-sm mt-1">{errors.phone}</p>}
+                  <div>
+                    <Label className="text-foreground mb-2 block">الجنس</Label>
+                    <div className="flex gap-2">
+                      {[
+                        { value: "male", label: "ذكر" },
+                        { value: "female", label: "أنثى" },
+                      ].map((g) => (
+                        <button
+                          key={g.value}
+                          type="button"
+                          onClick={() => update("gender", g.value)}
+                          className={`flex-1 h-12 rounded-xl border-2 text-center font-medium transition-all ${
+                            form.gender === g.value
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border text-muted-foreground hover:border-muted-foreground/30"
+                          }`}
+                        >
+                          {g.label}
+                        </button>
+                      ))}
+                    </div>
+                    {errors.gender && <p className="text-destructive text-sm mt-1">{errors.gender}</p>}
+                  </div>
+                  <div>
+                    <Label className="text-foreground mb-2 block">رقم الهوية / الجواز</Label>
+                    <Input
+                      value={form.idNumber}
+                      onChange={(e) => update("idNumber", e.target.value)}
+                      placeholder="مثال: 1234567890"
+                      className={fieldClass}
+                    />
+                    {errors.idNumber && <p className="text-destructive text-sm mt-1">{errors.idNumber}</p>}
+                  </div>
                 </div>
               </>
             )}
@@ -264,34 +262,47 @@ const AuthPage = () => {
               {errors.email && <p className="text-destructive text-sm mt-1">{errors.email}</p>}
             </div>
 
-            {/* Password */}
-            <div>
-              <Label className="text-foreground mb-2 block">كلمة المرور</Label>
-              <div className="relative">
+            {/* Row: Email + Password (+ Confirm on signup) */}
+            <div className={`grid grid-cols-1 ${!isLogin ? "md:grid-cols-2" : ""} gap-4`}>
+              <div>
+                <Label className="text-foreground mb-2 block">البريد الإلكتروني</Label>
                 <Input
-                  type={showPassword ? "text" : "password"}
-                  value={form.password}
-                  onChange={(e) => update("password", e.target.value)}
-                  placeholder="8 أحرف على الأقل (حروف وأرقام)"
-                  className={`${fieldClass} pl-12`}
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => update("email", e.target.value)}
+                  placeholder="example@email.com"
+                  className={fieldClass}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
+                {errors.email && <p className="text-destructive text-sm mt-1">{errors.email}</p>}
               </div>
-              {errors.password && <p className="text-destructive text-sm mt-1">{errors.password}</p>}
-              {!isLogin && (
-                <p className="text-muted-foreground text-xs mt-1">يجب أن تحتوي على 8 أحرف على الأقل مع حروف وأرقام</p>
-              )}
+              <div>
+                <Label className="text-foreground mb-2 block">كلمة المرور</Label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    value={form.password}
+                    onChange={(e) => update("password", e.target.value)}
+                    placeholder="8 أحرف على الأقل (حروف وأرقام)"
+                    className={`${fieldClass} pl-12`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+                {errors.password && <p className="text-destructive text-sm mt-1">{errors.password}</p>}
+                {!isLogin && (
+                  <p className="text-muted-foreground text-xs mt-1">يجب أن تحتوي على 8 أحرف على الأقل مع حروف وأرقام</p>
+                )}
+              </div>
             </div>
 
             {/* Confirm Password */}
             {!isLogin && (
-              <div>
+              <div className="md:w-1/2">
                 <Label className="text-foreground mb-2 block">تأكيد كلمة المرور</Label>
                 <div className="relative">
                   <Input
