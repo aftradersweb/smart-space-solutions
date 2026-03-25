@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Warehouse } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const CTASection = () => {
   return (
@@ -20,13 +21,17 @@ const CTASection = () => {
             انضم إلى مئات العملاء الذين يثقون في Smart Storage Hub لإدارة ممتلكاتهم بأمان وكفاءة.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
-            <Button size="lg" className="bg-gradient-gold text-primary-foreground font-bold text-lg px-10 glow-gold hover:opacity-90 transition-opacity">
-              أنشئ حسابك مجاناً
-              <ArrowLeft className="w-5 h-5 mr-2" />
-            </Button>
-            <Button size="lg" variant="outline" className="border-border text-foreground hover:bg-muted font-medium text-lg px-10">
-              تواصل معنا
-            </Button>
+            <Link to="/auth">
+              <Button size="lg" className="bg-gradient-gold text-primary-foreground font-bold text-lg px-10 glow-gold hover:opacity-90 transition-opacity">
+                أنشئ حسابك مجاناً
+                <ArrowLeft className="w-5 h-5 mr-2" />
+              </Button>
+            </Link>
+            <a href="mailto:contact@smartstoragehub.com">
+              <Button size="lg" variant="outline" className="border-border text-foreground hover:bg-muted font-medium text-lg px-10">
+                تواصل معنا
+              </Button>
+            </a>
           </div>
         </div>
 
