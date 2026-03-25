@@ -27,11 +27,11 @@ const CTASection = () => {
                 <ArrowLeft className="w-5 h-5 mr-2" />
               </Button>
             </Link>
-            <a href="mailto:contact@smartstoragehub.com">
+            <Link to="/contact">
               <Button size="lg" variant="outline" className="border-border text-foreground hover:bg-muted font-medium text-lg px-10">
                 تواصل معنا
               </Button>
-            </a>
+            </Link>
           </div>
         </div>
 
