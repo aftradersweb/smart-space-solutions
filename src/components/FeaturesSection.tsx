@@ -1,53 +1,29 @@
-import { Users, Building2, Settings2, TrendingUp, Clock, DollarSign, LayoutDashboard, PieChart } from "lucide-react";
-
-const audiences = [
-  {
-    title: "للأفراد",
-    icon: Users,
-    features: [
-      "سهولة الاستخدام عبر منصة إلكترونية",
-      "شفافية كاملة في الأسعار",
-      "مرونة في مدة التخزين",
-      "خدمات متكاملة في مكان واحد",
-    ],
-  },
-  {
-    title: "للشركات",
-    icon: Building2,
-    features: [
-      "إدارة مخزون بدون مستودعات خاصة",
-      "تقليل التكاليف التشغيلية",
-      "تقارير وتحليلات دقيقة",
-      "خطط اشتراك مرنة",
-    ],
-  },
-  {
-    title: "للإدارة",
-    icon: Settings2,
-    features: [
-      "نظام إدارة مركزي",
-      "متابعة جميع العمليات",
-      "التحكم في التسعير والخدمات",
-      "إدارة المساحات بكفاءة",
-    ],
-  },
-];
-
-const stats = [
-  { icon: TrendingUp, value: "حلول مرنة", desc: "تناسب جميع الاحتياجات" },
-  { icon: Clock, value: "24/7", desc: "دعم فني متواصل" },
-  { icon: DollarSign, value: "أسعار تنافسية", desc: "بدون تكاليف مخفية" },
-  { icon: LayoutDashboard, value: "لوحة تحكم ذكية", desc: "إدارة سهلة ومتقدمة" },
-];
+import { Users, Building2, Settings2, TrendingUp, Clock, DollarSign, LayoutDashboard } from "lucide-react";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const FeaturesSection = () => {
+  const { t } = useLanguage();
+
+  const audiences = [
+    { title: t.forIndividuals, icon: Users, features: t.individualFeatures },
+    { title: t.forCompanies, icon: Building2, features: t.companyFeatures },
+    { title: t.forManagement, icon: Settings2, features: t.managementFeatures },
+  ];
+
+  const stats = [
+    { icon: TrendingUp, value: t.flexibleSolutions, desc: t.suitAllNeeds },
+    { icon: Clock, value: t.support247, desc: t.continuousSupport },
+    { icon: DollarSign, value: t.competitivePricing, desc: t.noHiddenCosts },
+    { icon: LayoutDashboard, value: t.smartDashboard, desc: t.easyAdvancedMgmt },
+  ];
+
   return (
     <section id="features" className="py-24 bg-card">
       <div className="container mx-auto px-6 md:px-12">
         <div className="text-center mb-16">
-          <span className="text-primary font-bold text-sm tracking-wider">المميزات</span>
+          <span className="text-primary font-bold text-sm tracking-wider">{t.featuresLabel}</span>
           <h2 className="text-3xl md:text-5xl font-black text-foreground mt-3">
-            لماذا <span className="text-gradient-gold">Smart Storage Hub؟</span>
+            {t.whySmartStorage} <span className="text-gradient-gold">Smart Storage Hub؟</span>
           </h2>
         </div>
 
