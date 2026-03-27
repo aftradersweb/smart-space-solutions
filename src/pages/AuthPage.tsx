@@ -81,19 +81,11 @@ const AuthPage = () => {
       <div className="flex-1 flex items-center justify-center p-6 md:p-12 overflow-y-auto">
         <div className={`w-full py-8 ${isLogin ? "max-w-md" : "max-w-2xl"}`}>
           {/* Top bar */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center mb-8">
             <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft className={`w-4 h-4 ${dir === "ltr" ? "" : "rotate-180"}`} />
               {t.backToHome}
             </Link>
-            <button
-              type="button"
-              onClick={() => setLang(lang === "ar" ? "en" : "ar")}
-              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors border border-border rounded-lg px-3 py-1.5"
-            >
-              <Globe className="w-4 h-4" />
-              {lang === "ar" ? "EN" : "عربي"}
-            </button>
           </div>
 
           {/* Logo */}
@@ -208,14 +200,16 @@ const AuthPage = () => {
               </>
             )}
 
-            {/* Email + Password */}
+            {/* Email (full width) */}
+            <div>
+              <Label className="text-foreground mb-1.5 block text-sm">{t.email}</Label>
+              <Input type="email" value={form.email} onChange={(e) => update("email", e.target.value)}
+                placeholder={t.placeholderEmail} className={fieldClass} />
+              {errors.email && <p className="text-destructive text-xs mt-1">{errors.email}</p>}
+            </div>
+
+            {/* Password + Confirm Password side by side */}
             <div className={`grid grid-cols-1 ${!isLogin ? "md:grid-cols-2" : ""} gap-4`}>
-              <div>
-                <Label className="text-foreground mb-1.5 block text-sm">{t.email}</Label>
-                <Input type="email" value={form.email} onChange={(e) => update("email", e.target.value)}
-                  placeholder={t.placeholderEmail} className={fieldClass} />
-                {errors.email && <p className="text-destructive text-xs mt-1">{errors.email}</p>}
-              </div>
               <div>
                 <Label className="text-foreground mb-1.5 block text-sm">{t.password}</Label>
                 <div className="relative">
@@ -230,11 +224,7 @@ const AuthPage = () => {
                 {errors.password && <p className="text-destructive text-xs mt-1">{errors.password}</p>}
                 {!isLogin && <p className="text-muted-foreground text-xs mt-1">{t.passwordHint}</p>}
               </div>
-            </div>
-
-            {/* Confirm Password */}
-            {!isLogin && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {!isLogin && (
                 <div>
                   <Label className="text-foreground mb-1.5 block text-sm">{t.confirmPassword}</Label>
                   <div className="relative">
@@ -248,8 +238,8 @@ const AuthPage = () => {
                   </div>
                   {errors.confirmPassword && <p className="text-destructive text-xs mt-1">{errors.confirmPassword}</p>}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             <Button type="submit" size="lg" className="w-full bg-gradient-gold text-primary-foreground font-bold glow-gold hover:opacity-90 transition-opacity h-12">
               {isLogin ? t.submitLogin : t.submitSignup}
