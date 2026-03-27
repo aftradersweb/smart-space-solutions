@@ -24,10 +24,30 @@ const DashboardPage = () => {
   ];
 
   const mockOrders = [
-    { id: "ORD-001", date: "2026-03-20", type: lang === "ar" ? "تخزين عادي" : "Normal Storage", duration: lang === "ar" ? "3 أشهر" : "3 months", status: t.active, total: `4,500 ${t.sar}` },
-    { id: "ORD-002", date: "2026-03-15", type: lang === "ar" ? "تخزين مبرد" : "Cold Storage", duration: lang === "ar" ? "1 شهر" : "1 month", status: t.underReview, total: `3,600 ${t.sar}` },
-    { id: "ORD-003", date: "2026-02-28", type: lang === "ar" ? "تخزين سيارة" : "Car Storage", duration: lang === "ar" ? "6 أشهر" : "6 months", status: t.completed, total: `3,000 ${t.sar}` },
+    { id: "ORD-001", date: "2026-03-20", type: lang === "ar" ? "تخزين عادي" : "Normal Storage", duration: lang === "ar" ? "3 أشهر" : "3 months", durationMonths: 3, endDate: "2026-06-20", status: t.active, total: `4,500 ${t.sar}` },
+    { id: "ORD-002", date: "2026-03-15", type: lang === "ar" ? "تخزين مبرد" : "Cold Storage", duration: lang === "ar" ? "1 شهر" : "1 month", durationMonths: 1, endDate: "2026-04-15", status: t.underReview, total: `3,600 ${t.sar}` },
+    { id: "ORD-003", date: "2026-02-28", type: lang === "ar" ? "تخزين سيارة" : "Car Storage", duration: lang === "ar" ? "6 أشهر" : "6 months", durationMonths: 6, endDate: "2026-08-28", status: t.completed, total: `3,000 ${t.sar}` },
   ];
+
+  const getRemainingDays = (endDate: string) => {
+    const end = new Date(endDate);
+    const now = new Date();
+    return Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  };
+
+  const getRemainingLabel = (days: number) => {
+    if (days <= 0) return lang === "ar" ? "منتهي" : "Expired";
+    if (days === 1) return lang === "ar" ? "يوم واحد" : "1 day";
+    return lang === "ar" ? `${days} يوم` : `${days} days`;
+  };
+
+  const getRemainingColor = (days: number, totalMonths: number) => {
+    const totalDays = totalMonths * 30;
+    if (days <= 0) return "text-destructive font-bold";
+    if (days <= totalDays * 0.15 || days <= 7) return "text-destructive font-bold";
+    if (days <= totalDays * 0.3 || days <= 14) return "text-orange-500 font-semibold";
+    return "text-emerald-500 font-medium";
+  };
 
   const mockInvoices = [
     { id: "INV-001", order: "ORD-001", date: "2026-03-20", amount: `4,500 ${t.sar}`, status: t.paid },
@@ -225,23 +245,29 @@ const DashboardPage = () => {
               <div className="glass rounded-xl overflow-hidden">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-border">
-                      {[t.thOrderId, t.thDate, t.thStorageType, t.thDuration, t.thTotal, t.thStatus].map((h) => (
-                        <th key={h} className={`${dir === "rtl" ? "text-right" : "text-left"} p-4 text-sm font-medium text-muted-foreground`}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mockOrders.map((o) => (
-                      <tr key={o.id} className="border-b border-border/50 hover:bg-muted/10">
-                        <td className="p-4 font-medium text-primary text-sm">{o.id}</td>
-                        <td className="p-4 text-muted-foreground text-sm">{o.date}</td>
-                        <td className="p-4 text-muted-foreground text-sm">{o.type}</td>
-                        <td className="p-4 text-muted-foreground text-sm">{o.duration}</td>
-                        <td className="p-4 text-foreground font-bold text-sm">{o.total}</td>
-                        <td className="p-4"><Badge className={`${statusColor(o.status)} border-none text-xs`}>{o.status}</Badge></td>
-                      </tr>
-                    ))}
+                     <tr className="border-b border-border">
+                       {[t.thOrderId, t.thDate, t.thStorageType, t.thDuration, t.thRemaining, t.thTotal, t.thStatus].map((h) => (
+                         <th key={h} className={`${dir === "rtl" ? "text-right" : "text-left"} p-4 text-sm font-medium text-muted-foreground`}>{h}</th>
+                       ))}
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {mockOrders.map((o) => {
+                       const days = getRemainingDays(o.endDate);
+                       return (
+                         <tr key={o.id} className="border-b border-border/50 hover:bg-muted/10">
+                           <td className="p-4 font-medium text-primary text-sm">{o.id}</td>
+                           <td className="p-4 text-muted-foreground text-sm">{o.date}</td>
+                           <td className="p-4 text-muted-foreground text-sm">{o.type}</td>
+                           <td className="p-4 text-muted-foreground text-sm">{o.duration}</td>
+                           <td className={`p-4 text-sm ${getRemainingColor(days, o.durationMonths)}`}>
+                             {getRemainingLabel(days)}
+                           </td>
+                           <td className="p-4 text-foreground font-bold text-sm">{o.total}</td>
+                           <td className="p-4"><Badge className={`${statusColor(o.status)} border-none text-xs`}>{o.status}</Badge></td>
+                         </tr>
+                       );
+                     })}
                   </tbody>
                 </table>
               </div>
