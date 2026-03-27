@@ -257,6 +257,7 @@ const en = {
   thOrderId: "Order ID",
   thDate: "Date",
   thDuration: "Duration",
+  thRemaining: "Remaining",
   thTotal: "Total",
   thInvoiceId: "Invoice ID",
   thOrder: "Order",

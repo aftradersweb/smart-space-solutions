@@ -257,6 +257,7 @@ const ar = {
   thOrderId: "رقم الطلب",
   thDate: "التاريخ",
   thDuration: "المدة",
+  thRemaining: "المتبقي",
   thTotal: "الإجمالي",
   thInvoiceId: "رقم الفاتورة",
   thOrder: "الطلب",
