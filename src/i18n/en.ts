@@ -356,3 +356,5 @@ const en = {
   nrSar: "SAR",
   nrSarSqmMonth: "SAR/sqm/month",
 };
+
+export default en;

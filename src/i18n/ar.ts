@@ -356,3 +356,5 @@ const ar = {
   nrSar: "ر.س",
   nrSarSqmMonth: "ر.س/م²/شهر",
 };
+
+export default ar;
