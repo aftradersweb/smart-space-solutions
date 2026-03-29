@@ -356,6 +356,20 @@ const ar = {
   nrTotal: "الإجمالي",
   nrSar: "ر.س",
   nrSarSqmMonth: "ر.س/م²/شهر",
+
+  // Bottom Nav
+  navHome: "الرئيسية",
+  navServices: "الخدمات",
+  navNewRequest: "طلب جديد",
+  navDashboard: "لوحة التحكم",
+  navContact: "تواصل",
+
+  // PWA
+  installApp: "تثبيت التطبيق",
+  installPromptTitle: "تثبيت Smart Storage Hub",
+  installPromptDesc: "أضف التطبيق لشاشتك الرئيسية للوصول السريع",
+  install: "تثبيت",
+  dismiss: "لاحقاً",
 };
 
 export default ar;

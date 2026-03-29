@@ -356,6 +356,20 @@ const en = {
   nrTotal: "Total",
   nrSar: "SAR",
   nrSarSqmMonth: "SAR/sqm/month",
+
+  // Bottom Nav
+  navHome: "Home",
+  navServices: "Services",
+  navNewRequest: "New Request",
+  navDashboard: "Dashboard",
+  navContact: "Contact",
+
+  // PWA
+  installApp: "Install App",
+  installPromptTitle: "Install Smart Storage Hub",
+  installPromptDesc: "Add the app to your home screen for quick access",
+  install: "Install",
+  dismiss: "Later",
 };
 
 export default en;
