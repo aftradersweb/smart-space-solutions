@@ -57,33 +57,33 @@ const ServicesPage = () => {
         </div>
       </nav>
 
-      <div className="container mx-auto px-6 md:px-12 py-12">
-        <div className="text-center mb-12">
-          <h1 className="text-3xl md:text-5xl font-black text-foreground mb-4">
-            <Calculator className="inline w-10 h-10 text-primary mx-3" />
+      <div className="container mx-auto px-4 md:px-12 py-8 md:py-12">
+        <div className="text-center mb-8 md:mb-12">
+          <h1 className="text-2xl md:text-5xl font-black text-foreground mb-3 md:mb-4">
+            <Calculator className="inline w-7 h-7 md:w-10 md:h-10 text-primary mx-2 md:mx-3" />
             {t.storageCostCalculator} <span className="text-gradient-gold">{t.costCalculation}</span>
           </h1>
-          <p className="text-muted-foreground max-w-xl mx-auto">{t.calcDesc}</p>
+          <p className="text-muted-foreground max-w-xl mx-auto text-xs md:text-base">{t.calcDesc}</p>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
             {/* Storage Type */}
             <div>
-              <h2 className="text-xl font-bold text-foreground mb-4">{t.storageType}</h2>
-              <div className="grid sm:grid-cols-2 gap-4">
+              <h2 className="text-base md:text-xl font-bold text-foreground mb-3 md:mb-4">{t.storageType}</h2>
+              <div className="grid grid-cols-2 gap-3 md:gap-4">
                 {storageTypes.map((type) => (
                   <button key={type.id} onClick={() => setSelectedType(type.id)}
-                    className={`flex items-start gap-4 p-5 rounded-xl border-2 transition-all ${dir === "rtl" ? "text-right" : "text-left"} ${
+                    className={`flex items-start gap-2 md:gap-4 p-3 md:p-5 rounded-xl border-2 transition-all ${dir === "rtl" ? "text-right" : "text-left"} ${
                       selectedType === type.id ? "border-primary bg-primary/10" : "border-border hover:border-muted-foreground/30"
                     }`}>
-                    <div className={`p-2.5 rounded-lg ${selectedType === type.id ? "bg-gradient-gold" : "bg-muted"}`}>
-                      <type.icon className={`w-5 h-5 ${selectedType === type.id ? "text-primary-foreground" : "text-muted-foreground"}`} />
+                    <div className={`p-1.5 md:p-2.5 rounded-lg ${selectedType === type.id ? "bg-gradient-gold" : "bg-muted"}`}>
+                      <type.icon className={`w-4 h-4 md:w-5 md:h-5 ${selectedType === type.id ? "text-primary-foreground" : "text-muted-foreground"}`} />
                     </div>
-                    <div className="flex-1">
-                      <div className="font-bold text-foreground">{type.name}</div>
-                      <div className="text-sm text-muted-foreground">{type.desc}</div>
-                      <div className="text-primary font-bold mt-1">{type.price} {t.sarPerSqmMonth}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-foreground text-xs md:text-base">{type.name}</div>
+                      <div className="text-[10px] md:text-sm text-muted-foreground hidden md:block">{type.desc}</div>
+                      <div className="text-primary font-bold mt-0.5 md:mt-1 text-[10px] md:text-sm">{type.price} {t.sarPerSqmMonth}</div>
                     </div>
                   </button>
                 ))}
@@ -118,16 +118,16 @@ const ServicesPage = () => {
 
             {/* Extras */}
             <div>
-              <h2 className="text-xl font-bold text-foreground mb-4">{t.extraServicesTitle}</h2>
-              <div className="grid sm:grid-cols-2 gap-3">
+              <h2 className="text-base md:text-xl font-bold text-foreground mb-3 md:mb-4">{t.extraServicesTitle}</h2>
+              <div className="grid grid-cols-2 gap-2 md:gap-3">
                 {extras.map((extra) => (
                   <button key={extra.id} onClick={() => toggleExtra(extra.id)}
-                    className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+                    className={`flex items-center gap-2 md:gap-3 p-3 md:p-4 rounded-xl border-2 transition-all ${
                       selectedExtras.includes(extra.id) ? "border-primary bg-primary/10" : "border-border hover:border-muted-foreground/30"
                     }`}>
-                    <extra.icon className={`w-5 h-5 ${selectedExtras.includes(extra.id) ? "text-primary" : "text-muted-foreground"}`} />
-                    <span className={`flex-1 text-foreground font-medium ${dir === "rtl" ? "text-right" : "text-left"}`}>{extra.name}</span>
-                    <span className="text-sm text-primary font-bold">{extra.price} {t.sarPerMonth}</span>
+                    <extra.icon className={`w-4 h-4 md:w-5 md:h-5 flex-shrink-0 ${selectedExtras.includes(extra.id) ? "text-primary" : "text-muted-foreground"}`} />
+                    <span className={`flex-1 text-foreground font-medium text-[11px] md:text-sm ${dir === "rtl" ? "text-right" : "text-left"}`}>{extra.name}</span>
+                    <span className="text-[10px] md:text-sm text-primary font-bold whitespace-nowrap">{extra.price} {t.sarPerMonth}</span>
                   </button>
                 ))}
               </div>
