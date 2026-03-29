@@ -22,7 +22,7 @@ const HowItWorksSection = () => {
           <p className="text-muted-foreground mt-4 max-w-xl mx-auto">{t.howItWorksDesc}</p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {steps.map((step, i) => (
             <div key={step.step} className="relative glass rounded-2xl p-8 group hover:border-primary/30 transition-all duration-300">
               <span className="absolute top-4 left-4 text-6xl font-black text-muted/50">{step.step}</span>
