@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { useIsMobile } from "@/hooks/use-mobile";
+import MobileTopBar from "@/components/MobileTopBar";
+import MobileBottomNav from "@/components/MobileBottomNav";
 
 type Tab = "overview" | "products" | "orders" | "invoices";
 
@@ -16,6 +19,7 @@ const DashboardPage = () => {
   const [tab, setTab] = useState<Tab>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { t, lang, setLang, dir } = useLanguage();
+  const isMobile = useIsMobile();
 
   const mockProducts = [
     { id: 1, name: lang === "ar" ? "أثاث مكتبي" : "Office Furniture", type: lang === "ar" ? "أثاث" : "Furniture", qty: 15, size: `20 ${t.sqm}`, storage: lang === "ar" ? "عادي" : "Normal", status: t.stored },
@@ -75,6 +79,226 @@ const DashboardPage = () => {
     { id: "invoices" as Tab, label: t.invoices, icon: CreditCard },
   ];
 
+  // Mobile tab bar for dashboard sections
+  const MobileTabBar = () => (
+    <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-hide">
+      {sidebarItems.map((item) => (
+        <button
+          key={item.id}
+          onClick={() => setTab(item.id)}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs whitespace-nowrap transition-colors shrink-0 ${
+            tab === item.id
+              ? "bg-primary/10 text-primary font-medium"
+              : "text-muted-foreground hover:text-foreground bg-muted/20"
+          }`}
+        >
+          <item.icon className="w-3.5 h-3.5" />
+          <span>{item.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+
+  // Mobile card view for orders
+  const MobileOrderCard = ({ o }: { o: typeof mockOrders[0] }) => {
+    const days = getRemainingDays(o.endDate);
+    return (
+      <div className="glass rounded-xl p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="font-medium text-primary text-sm">{o.id}</span>
+          <Badge className={`${statusColor(o.status)} border-none text-[10px]`}>{o.status}</Badge>
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div>
+            <span className="text-muted-foreground">{t.thDate}</span>
+            <p className="text-foreground mt-0.5">{o.date}</p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">{t.thStorageType}</span>
+            <p className="text-foreground mt-0.5">{o.type}</p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">{t.thDuration}</span>
+            <p className="text-foreground mt-0.5">{o.duration}</p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">{t.thRemaining}</span>
+            <p className={`mt-0.5 ${getRemainingColor(days, o.durationMonths)}`}>{getRemainingLabel(days)}</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-between pt-1 border-t border-border/50">
+          <span className="text-xs text-muted-foreground">{t.thTotal}</span>
+          <span className="text-sm font-bold text-foreground">{o.total}</span>
+        </div>
+      </div>
+    );
+  };
+
+  // Mobile card view for products
+  const MobileProductCard = ({ p }: { p: typeof mockProducts[0] }) => (
+    <div className="glass rounded-xl p-4 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="font-medium text-foreground text-sm">{p.name}</span>
+        <Badge className={`${statusColor(p.status)} border-none text-[10px]`}>{p.status}</Badge>
+      </div>
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div>
+          <span className="text-muted-foreground">{t.thType}</span>
+          <p className="text-foreground mt-0.5">{p.type}</p>
+        </div>
+        <div>
+          <span className="text-muted-foreground">{t.thQuantity}</span>
+          <p className="text-foreground mt-0.5">{p.qty}</p>
+        </div>
+        <div>
+          <span className="text-muted-foreground">{t.thArea}</span>
+          <p className="text-foreground mt-0.5">{p.size}</p>
+        </div>
+        <div>
+          <span className="text-muted-foreground">{t.thStorageType}</span>
+          <p className="text-foreground mt-0.5">{p.storage}</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Mobile card view for invoices
+  const MobileInvoiceCard = ({ inv }: { inv: typeof mockInvoices[0] }) => (
+    <div className="glass rounded-xl p-4 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="font-medium text-foreground text-sm">{inv.id}</span>
+        <Badge className={`${statusColor(inv.status)} border-none text-[10px]`}>{inv.status}</Badge>
+      </div>
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div>
+          <span className="text-muted-foreground">{t.thOrder}</span>
+          <p className="text-primary mt-0.5">{inv.order}</p>
+        </div>
+        <div>
+          <span className="text-muted-foreground">{t.thDate}</span>
+          <p className="text-foreground mt-0.5">{inv.date}</p>
+        </div>
+      </div>
+      <div className="flex items-center justify-between pt-1 border-t border-border/50">
+        <span className="text-xs text-muted-foreground">{t.thAmount}</span>
+        <span className="text-sm font-bold text-foreground">{inv.amount}</span>
+      </div>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-background pb-20 pt-14" dir={dir}>
+        <MobileTopBar />
+        <main className="p-4 space-y-4">
+          <h1 className="text-lg font-bold text-foreground">{t.dashboard}</h1>
+          <MobileTabBar />
+
+          {tab === "overview" && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: t.totalProducts, value: "65", icon: Package, color: "text-blue-400" },
+                  { label: t.activeOrders, value: "3", icon: ClipboardList, color: "text-emerald-400" },
+                  { label: t.usedSpace, value: `60 ${t.sqm}`, icon: Warehouse, color: "text-primary" },
+                  { label: t.totalPayments, value: `11,100 ${t.sar}`, icon: CreditCard, color: "text-purple-400" },
+                ].map((stat) => (
+                  <div key={stat.label} className="glass rounded-xl p-3">
+                    <stat.icon className={`w-4 h-4 ${stat.color} mb-2`} />
+                    <div className="text-lg font-black text-foreground">{stat.value}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">{stat.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-4">
+                <div className="glass rounded-xl p-4">
+                  <h3 className="font-bold text-foreground text-sm mb-3">{t.latestOrders}</h3>
+                  <div className="space-y-2">
+                    {mockOrders.slice(0, 3).map((o) => (
+                      <div key={o.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/20">
+                        <div>
+                          <span className="font-medium text-foreground text-xs">{o.id}</span>
+                          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mt-0.5">
+                            <Calendar className="w-2.5 h-2.5" /> {o.date}
+                          </div>
+                        </div>
+                        <Badge className={`${statusColor(o.status)} border-none text-[10px]`}>{o.status}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="glass rounded-xl p-4">
+                  <h3 className="font-bold text-foreground text-sm mb-3">{t.storedProducts}</h3>
+                  <div className="space-y-2">
+                    {mockProducts.map((p) => (
+                      <div key={p.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/20">
+                        <div>
+                          <span className="font-medium text-foreground text-xs">{p.name}</span>
+                          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mt-0.5">
+                            <MapPin className="w-2.5 h-2.5" /> {p.size} - {p.storage}
+                          </div>
+                        </div>
+                        <Badge className={`${statusColor(p.status)} border-none text-[10px]`}>{p.status}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {tab === "products" && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-bold text-foreground">{t.productsAndProperties}</h2>
+                <Link to="/new-request">
+                  <Button size="sm" className="bg-gradient-gold text-primary-foreground font-medium glow-gold hover:opacity-90 text-xs h-8">
+                    <Plus className="w-3.5 h-3.5" /> {t.addProduct}
+                  </Button>
+                </Link>
+              </div>
+              <div className="space-y-3">
+                {mockProducts.map((p) => <MobileProductCard key={p.id} p={p} />)}
+              </div>
+            </div>
+          )}
+
+          {tab === "orders" && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-bold text-foreground">{t.orders}</h2>
+                <Link to="/new-request">
+                  <Button size="sm" className="bg-gradient-gold text-primary-foreground font-medium glow-gold hover:opacity-90 text-xs h-8">
+                    <Plus className="w-3.5 h-3.5" /> {t.newStorageRequest}
+                  </Button>
+                </Link>
+              </div>
+              <div className="space-y-3">
+                {mockOrders.map((o) => <MobileOrderCard key={o.id} o={o} />)}
+              </div>
+            </div>
+          )}
+
+          {tab === "invoices" && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-bold text-foreground">{t.invoicesAndPayments}</h2>
+                <Button size="sm" variant="outline" className="border-border text-foreground text-xs h-8">
+                  <FileText className="w-3.5 h-3.5" /> {t.exportInvoices}
+                </Button>
+              </div>
+              <div className="space-y-3">
+                {mockInvoices.map((inv) => <MobileInvoiceCard key={inv.id} inv={inv} />)}
+              </div>
+            </div>
+          )}
+        </main>
+        <MobileBottomNav />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex" dir={dir}>
       {/* Sidebar */}
@@ -118,7 +342,7 @@ const DashboardPage = () => {
             <h1 className="text-lg font-bold text-foreground">{t.dashboard}</h1>
           </div>
           <div className="flex items-center gap-3">
-            <div className="relative hidden md:block">
+            <div className="relative">
               <Search className={`absolute ${dir === "rtl" ? "right-3" : "left-3"} top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground`} />
               <Input placeholder={t.search} className={`bg-muted/30 border-border ${dir === "rtl" ? "pr-10" : "pl-10"} w-64 h-9`} />
             </div>
