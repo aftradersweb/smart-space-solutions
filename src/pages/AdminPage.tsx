@@ -3,29 +3,48 @@ import { Link } from "react-router-dom";
 import {
   Warehouse, LayoutDashboard, ClipboardList, MapPin as Space, DollarSign,
   Users, Search, Bell, User, LogOut, ChevronLeft, Eye,
-  CheckCircle, XCircle, Clock, MoreVertical, TrendingUp, Package, Globe
+  CheckCircle, XCircle, Clock, MoreVertical, TrendingUp, Package, Globe,
+  Settings, Save, Download, FileText, FileSpreadsheet,
+  Twitter, Instagram, Facebook, Linkedin, MessageCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useCurrency, currencies, type Currency } from "@/i18n/CurrencyContext";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import MobileTopBar from "@/components/MobileTopBar";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
-type Tab = "overview" | "orders" | "spaces" | "pricing" | "users";
+type Tab = "overview" | "orders" | "spaces" | "pricing" | "users" | "settings";
 
 const AdminPage = () => {
   const [tab, setTab] = useState<Tab>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { t, lang, setLang, dir } = useLanguage();
   const isMobile = useIsMobile();
+  const { currency, setCurrency, currencySymbol, formatPrice } = useCurrency();
+  const { toast } = useToast();
+
+  // Settings state
+  const [companyInfo, setCompanyInfo] = useState({
+    name: "Smart Storage Hub",
+    email: "info@smartstoragehub.com",
+    phone: "+966 50 123 4567",
+    address: lang === "ar" ? "الرياض، المملكة العربية السعودية" : "Riyadh, Saudi Arabia",
+    description: "",
+  });
+  const [socialMedia, setSocialMedia] = useState({
+    twitter: "", instagram: "", facebook: "", linkedin: "", whatsapp: "", snapchat: "", tiktok: "",
+  });
 
   const mockAdminOrders = [
-    { id: "ORD-001", client: t.adminCompanyAlaman, type: t.adminNormalStorage, area: `20 ${t.adminSqm}`, duration: `3 ${t.adminMonths}`, total: `4,500 ${t.sar}`, status: t.adminUnderReview, date: "2026-03-20" },
-    { id: "ORD-002", client: t.adminAhmedMohammed, type: t.adminColdStorage, area: `30 ${t.adminSqm}`, duration: `1 ${t.adminMonth}`, total: `3,600 ${t.sar}`, status: t.adminApproved, date: "2026-03-18" },
-    { id: "ORD-003", client: t.adminCompanyNokhba, type: t.adminCarStorage, area: "-", duration: `6 ${t.adminMonths}`, total: `3,000 ${t.sar}`, status: t.adminCompleted, date: "2026-03-10" },
-    { id: "ORD-004", client: t.adminSaraAhmed, type: t.adminHazardous, area: `5 ${t.adminSqm}`, duration: `2 ${t.adminMonth}`, total: `3,000 ${t.sar}`, status: t.adminRejected, date: "2026-03-05" },
+    { id: "ORD-001", client: t.adminCompanyAlaman, type: t.adminNormalStorage, area: `20 ${t.adminSqm}`, duration: `3 ${t.adminMonths}`, totalSar: 4500, status: t.adminUnderReview, date: "2026-03-20" },
+    { id: "ORD-002", client: t.adminAhmedMohammed, type: t.adminColdStorage, area: `30 ${t.adminSqm}`, duration: `1 ${t.adminMonth}`, totalSar: 3600, status: t.adminApproved, date: "2026-03-18" },
+    { id: "ORD-003", client: t.adminCompanyNokhba, type: t.adminCarStorage, area: "-", duration: `6 ${t.adminMonths}`, totalSar: 3000, status: t.adminCompleted, date: "2026-03-10" },
+    { id: "ORD-004", client: t.adminSaraAhmed, type: t.adminHazardous, area: `5 ${t.adminSqm}`, duration: `2 ${t.adminMonth}`, totalSar: 3000, status: t.adminRejected, date: "2026-03-05" },
   ];
 
   const mockSpaces = [
@@ -69,6 +88,7 @@ const AdminPage = () => {
     { id: "spaces" as Tab, label: t.adminSpaces, icon: Space },
     { id: "pricing" as Tab, label: t.adminPricing, icon: DollarSign },
     { id: "users" as Tab, label: t.adminUsers, icon: Users },
+    { id: "settings" as Tab, label: t.adminSettings, icon: Settings },
   ];
 
   const textAlign = dir === "rtl" ? "text-right" : "text-left";
@@ -76,9 +96,75 @@ const AdminPage = () => {
   const stats = [
     { label: t.adminTotalOrders, value: "156", icon: ClipboardList, color: "text-blue-400", change: "+12%" },
     { label: t.adminPendingOrders, value: "8", icon: Clock, color: "text-amber-400", change: "-3" },
-    { label: t.adminTotalRevenue, value: `245,000 ${t.sar}`, icon: TrendingUp, color: "text-emerald-400", change: "+18%" },
+    { label: t.adminTotalRevenue, value: formatPrice(245000), icon: TrendingUp, color: "text-emerald-400", change: "+18%" },
     { label: t.adminActiveClients, value: "89", icon: Users, color: "text-purple-400", change: "+5" },
   ];
+
+  // ─── Export helpers ───
+  const exportToCSV = (data: Record<string, string>[], filename: string) => {
+    if (!data.length) return;
+    const headers = Object.keys(data[0]);
+    const csv = [headers.join(","), ...data.map(row => headers.map(h => `"${row[h] || ""}"`).join(","))].join("\n");
+    const bom = "\uFEFF";
+    const blob = new Blob([bom + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `${filename}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToPDF = (title: string, headers: string[], rows: string[][]) => {
+    const win = window.open("", "_blank");
+    if (!win) return;
+    const html = `<!DOCTYPE html><html dir="${dir}"><head><meta charset="utf-8"><title>${title}</title>
+    <style>body{font-family:Arial,sans-serif;padding:40px;direction:${dir}}
+    h1{color:#333;margin-bottom:20px}
+    table{width:100%;border-collapse:collapse;margin-top:20px}
+    th,td{border:1px solid #ddd;padding:10px;text-align:${dir === "rtl" ? "right" : "left"}}
+    th{background:#f5f5f5;font-weight:bold}
+    tr:nth-child(even){background:#fafafa}
+    .footer{margin-top:30px;text-align:center;color:#999;font-size:12px}</style></head>
+    <body><h1>${title}</h1>
+    <table><thead><tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>
+    <div class="footer">Smart Storage Hub - ${new Date().toLocaleDateString()}</div>
+    </body></html>`;
+    win.document.write(html);
+    win.document.close();
+    setTimeout(() => { win.print(); }, 500);
+  };
+
+  const handleExportOrdersCSV = () => {
+    exportToCSV(mockAdminOrders.map(o => ({
+      [t.adminThOrderId]: o.id, [t.adminThClient]: o.client, [t.adminThType]: o.type,
+      [t.adminThArea]: o.area, [t.adminThDuration]: o.duration,
+      [t.adminThTotal]: formatPrice(o.totalSar), [t.adminThStatus]: o.status, [t.thDate]: o.date,
+    })), "orders");
+  };
+
+  const handleExportOrdersPDF = () => {
+    exportToPDF(t.adminManageOrders,
+      [t.adminThOrderId, t.adminThClient, t.adminThType, t.adminThArea, t.adminThDuration, t.adminThTotal, t.adminThStatus],
+      mockAdminOrders.map(o => [o.id, o.client, o.type, o.area, o.duration, formatPrice(o.totalSar), o.status])
+    );
+  };
+
+  const handleExportInvoicesCSV = () => {
+    exportToCSV(mockAdminOrders.map(o => ({
+      [t.thInvoiceId]: `INV-${o.id.split("-")[1]}`,
+      [t.adminThClient]: o.client,
+      [t.thAmount]: formatPrice(o.totalSar),
+      [t.adminThStatus]: o.status,
+      [t.thDate]: o.date,
+    })), "invoices");
+  };
+
+  const handleExportInvoicesPDF = () => {
+    exportToPDF(t.invoicesAndPayments || "Invoices",
+      [t.thInvoiceId, t.adminThClient, t.thAmount, t.adminThStatus, t.thDate],
+      mockAdminOrders.map(o => [`INV-${o.id.split("-")[1]}`, o.client, formatPrice(o.totalSar), o.status, o.date])
+    );
+  };
 
   // Mobile tab bar
   const MobileTabBar = () => (
@@ -121,7 +207,7 @@ const AdminPage = () => {
                     <span className="font-medium text-foreground text-xs md:text-sm">{o.id}</span>
                     <span className="text-[10px] md:text-xs text-muted-foreground">- {o.client}</span>
                   </div>
-                  <span className="text-[10px] md:text-xs text-muted-foreground">{o.type} | {o.total}</span>
+                  <span className="text-[10px] md:text-xs text-muted-foreground">{o.type} | {formatPrice(o.totalSar)}</span>
                 </div>
                 <Badge className={`${statusColor(o.status)} border-none text-[10px] md:text-xs`}>{o.status}</Badge>
               </div>
@@ -153,10 +239,24 @@ const AdminPage = () => {
 
   // ─── Orders ───
   const OrdersContent = () => {
+    const ExportButtons = () => (
+      <div className="flex gap-2 flex-wrap">
+        <Button variant="outline" size="sm" onClick={handleExportOrdersPDF} className="gap-1.5 text-xs">
+          <FileText className="w-3.5 h-3.5" />{t.exportPDF}
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleExportOrdersCSV} className="gap-1.5 text-xs">
+          <FileSpreadsheet className="w-3.5 h-3.5" />{t.exportExcel}
+        </Button>
+      </div>
+    );
+
     if (isMobile) {
       return (
         <div className="space-y-3">
-          <h2 className="text-base font-bold text-foreground">{t.adminManageOrders}</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold text-foreground">{t.adminManageOrders}</h2>
+            <ExportButtons />
+          </div>
           {mockAdminOrders.map((o) => (
             <div key={o.id} className="glass rounded-xl p-4 space-y-2">
               <div className="flex items-center justify-between">
@@ -170,7 +270,7 @@ const AdminPage = () => {
                 <div><span className="text-muted-foreground">{t.adminThDuration}</span><p className="text-foreground mt-0.5">{o.duration}</p></div>
               </div>
               <div className="flex items-center justify-between pt-1 border-t border-border/50">
-                <span className="text-sm font-bold text-foreground">{o.total}</span>
+                <span className="text-sm font-bold text-foreground">{formatPrice(o.totalSar)}</span>
                 <div className="flex items-center gap-1">
                   {o.status === t.adminUnderReview && (
                     <>
@@ -188,7 +288,10 @@ const AdminPage = () => {
     }
     return (
       <div>
-        <h2 className="text-xl font-bold text-foreground mb-6">{t.adminManageOrders}</h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-foreground">{t.adminManageOrders}</h2>
+          <ExportButtons />
+        </div>
         <div className="glass rounded-xl overflow-hidden">
           <table className="w-full">
             <thead>
@@ -206,7 +309,7 @@ const AdminPage = () => {
                   <td className="p-4 text-muted-foreground text-sm">{o.type}</td>
                   <td className="p-4 text-muted-foreground text-sm">{o.area}</td>
                   <td className="p-4 text-muted-foreground text-sm">{o.duration}</td>
-                  <td className="p-4 text-foreground font-bold text-sm">{o.total}</td>
+                  <td className="p-4 text-foreground font-bold text-sm">{formatPrice(o.totalSar)}</td>
                   <td className="p-4"><Badge className={`${statusColor(o.status)} border-none text-xs`}>{o.status}</Badge></td>
                   <td className="p-4">
                     <div className="flex items-center gap-1">
@@ -267,7 +370,7 @@ const AdminPage = () => {
             <div key={p.type} className="glass rounded-xl p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-medium text-foreground text-sm">{p.type}</span>
-                <span className="text-primary font-bold text-sm">{p.pricePerM2} {t.sar}</span>
+                <span className="text-primary font-bold text-sm">{formatPrice(p.pricePerM2)}</span>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div><span className="text-muted-foreground">{t.adminThMinArea}</span><p className="text-foreground mt-0.5">{p.minArea} {t.adminSqm}</p></div>
@@ -295,7 +398,7 @@ const AdminPage = () => {
               {mockPricing.map((p) => (
                 <tr key={p.type} className="border-b border-border/50 hover:bg-muted/10">
                   <td className="p-4 font-medium text-foreground text-sm">{p.type}</td>
-                  <td className="p-4 text-primary font-bold text-sm">{p.pricePerM2} {t.sar}</td>
+                  <td className="p-4 text-primary font-bold text-sm">{formatPrice(p.pricePerM2)}</td>
                   <td className="p-4 text-muted-foreground text-sm">{p.minArea} {t.adminSqm}</td>
                   <td className="p-4 text-muted-foreground text-sm">{p.minDuration} {t.adminMonth}</td>
                   <td className="p-4"><Button variant="ghost" size="sm" className="text-primary hover:text-primary/80">{t.adminEdit}</Button></td>
@@ -360,6 +463,133 @@ const AdminPage = () => {
     );
   };
 
+  // ─── Settings ───
+  const SettingsContent = () => {
+    const handleSave = () => {
+      toast({ title: t.settingsSaved });
+    };
+
+    const socialFields = [
+      { key: "twitter", label: t.settingsTwitter, icon: Twitter },
+      { key: "instagram", label: t.settingsInstagram, icon: Instagram },
+      { key: "facebook", label: t.settingsFacebook, icon: Facebook },
+      { key: "linkedin", label: t.settingsLinkedin, icon: Linkedin },
+      { key: "whatsapp", label: t.settingsWhatsapp, icon: MessageCircle },
+      { key: "snapchat", label: t.settingsSnapchat, icon: Globe },
+      { key: "tiktok", label: t.settingsTiktok, icon: Globe },
+    ];
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base md:text-xl font-bold text-foreground">{t.adminSettings}</h2>
+          <Button onClick={handleSave} className="gap-1.5" size={isMobile ? "sm" : "default"}>
+            <Save className="w-4 h-4" />{t.settingsSave}
+          </Button>
+        </div>
+
+        {/* Company Info */}
+        <div className="glass rounded-xl p-4 md:p-6 space-y-4">
+          <h3 className="font-bold text-foreground text-sm md:text-base">{t.settingsCompanyInfo}</h3>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{t.settingsCompanyName}</label>
+              <Input value={companyInfo.name} onChange={(e) => setCompanyInfo({ ...companyInfo, name: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{t.settingsCompanyEmail}</label>
+              <Input value={companyInfo.email} onChange={(e) => setCompanyInfo({ ...companyInfo, email: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{t.settingsCompanyPhone}</label>
+              <Input value={companyInfo.phone} onChange={(e) => setCompanyInfo({ ...companyInfo, phone: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{t.settingsCompanyAddress}</label>
+              <Input value={companyInfo.address} onChange={(e) => setCompanyInfo({ ...companyInfo, address: e.target.value })} />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs text-muted-foreground">{t.settingsCompanyDesc}</label>
+            <textarea
+              value={companyInfo.description}
+              onChange={(e) => setCompanyInfo({ ...companyInfo, description: e.target.value })}
+              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px]"
+            />
+          </div>
+        </div>
+
+        {/* Currency */}
+        <div className="glass rounded-xl p-4 md:p-6 space-y-4">
+          <h3 className="font-bold text-foreground text-sm md:text-base">{t.settingsCurrency}</h3>
+          <div className="max-w-sm space-y-1.5">
+            <label className="text-xs text-muted-foreground">{t.settingsDefaultCurrency}</label>
+            <Select value={currency} onValueChange={(v) => setCurrency(v as Currency)}>
+              <SelectTrigger>
+                <SelectValue placeholder={t.settingsSelectCurrency} />
+              </SelectTrigger>
+              <SelectContent>
+                {currencies.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>
+                    {c.symbol} — {lang === "ar" ? c.nameAr : c.nameEn} ({c.code})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Social Media */}
+        <div className="glass rounded-xl p-4 md:p-6 space-y-4">
+          <h3 className="font-bold text-foreground text-sm md:text-base">{t.settingsSocialMedia}</h3>
+          <div className="grid md:grid-cols-2 gap-4">
+            {socialFields.map((sf) => (
+              <div key={sf.key} className="space-y-1.5">
+                <label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <sf.icon className="w-3.5 h-3.5" />{sf.label}
+                </label>
+                <Input
+                  placeholder={`https://...`}
+                  value={socialMedia[sf.key as keyof typeof socialMedia]}
+                  onChange={(e) => setSocialMedia({ ...socialMedia, [sf.key]: e.target.value })}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Export Section */}
+        <div className="glass rounded-xl p-4 md:p-6 space-y-4">
+          <h3 className="font-bold text-foreground text-sm md:text-base">{t.settingsExport}</h3>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">{t.settingsExportOrders}</p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleExportOrdersPDF} className="gap-1.5">
+                  <FileText className="w-4 h-4" />PDF
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleExportOrdersCSV} className="gap-1.5">
+                  <FileSpreadsheet className="w-4 h-4" />Excel/CSV
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">{t.settingsExportInvoices}</p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleExportInvoicesPDF} className="gap-1.5">
+                  <FileText className="w-4 h-4" />PDF
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleExportInvoicesCSV} className="gap-1.5">
+                  <FileSpreadsheet className="w-4 h-4" />Excel/CSV
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // ─── Mobile Layout ───
   if (isMobile) {
     return (
@@ -373,6 +603,7 @@ const AdminPage = () => {
           {tab === "spaces" && <SpacesContent />}
           {tab === "pricing" && <PricingContent />}
           {tab === "users" && <UsersContent />}
+          {tab === "settings" && <SettingsContent />}
         </main>
         <MobileBottomNav />
       </div>
@@ -447,6 +678,7 @@ const AdminPage = () => {
           {tab === "spaces" && <SpacesContent />}
           {tab === "pricing" && <PricingContent />}
           {tab === "users" && <UsersContent />}
+          {tab === "settings" && <SettingsContent />}
         </main>
       </div>
     </div>
