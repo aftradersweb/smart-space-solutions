@@ -445,6 +445,33 @@ const en = {
   adminCar: "car",
   adminMonth: "month",
   adminMonths: "months",
+
+  // Admin Settings
+  adminSettings: "Settings",
+  settingsCompanyInfo: "Company Information",
+  settingsCompanyName: "Company Name",
+  settingsCompanyEmail: "Email",
+  settingsCompanyPhone: "Phone Number",
+  settingsCompanyAddress: "Address",
+  settingsCompanyDesc: "Company Description",
+  settingsSocialMedia: "Social Media",
+  settingsTwitter: "Twitter (X)",
+  settingsInstagram: "Instagram",
+  settingsFacebook: "Facebook",
+  settingsLinkedin: "LinkedIn",
+  settingsWhatsapp: "WhatsApp",
+  settingsSnapchat: "Snapchat",
+  settingsTiktok: "TikTok",
+  settingsCurrency: "Currencies",
+  settingsDefaultCurrency: "Default Currency",
+  settingsSelectCurrency: "Select Currency",
+  settingsSave: "Save Settings",
+  settingsSaved: "Settings saved successfully!",
+  settingsExport: "Export",
+  settingsExportOrders: "Export Orders",
+  settingsExportInvoices: "Export Invoices",
+  exportPDF: "Export PDF",
+  exportExcel: "Export Excel",
 };
 
 export default en;

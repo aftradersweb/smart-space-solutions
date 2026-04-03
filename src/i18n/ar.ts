@@ -445,6 +445,33 @@ const ar = {
   adminCar: "سيارة",
   adminMonth: "شهر",
   adminMonths: "أشهر",
+
+  // Admin Settings
+  adminSettings: "الإعدادات",
+  settingsCompanyInfo: "معلومات الشركة",
+  settingsCompanyName: "اسم الشركة",
+  settingsCompanyEmail: "البريد الإلكتروني",
+  settingsCompanyPhone: "رقم الهاتف",
+  settingsCompanyAddress: "العنوان",
+  settingsCompanyDesc: "وصف الشركة",
+  settingsSocialMedia: "وسائل التواصل الاجتماعي",
+  settingsTwitter: "تويتر (X)",
+  settingsInstagram: "انستغرام",
+  settingsFacebook: "فيسبوك",
+  settingsLinkedin: "لينكد إن",
+  settingsWhatsapp: "واتساب",
+  settingsSnapchat: "سناب شات",
+  settingsTiktok: "تيك توك",
+  settingsCurrency: "العملات",
+  settingsDefaultCurrency: "العملة الافتراضية",
+  settingsSelectCurrency: "اختر العملة",
+  settingsSave: "حفظ الإعدادات",
+  settingsSaved: "تم حفظ الإعدادات بنجاح!",
+  settingsExport: "تصدير",
+  settingsExportOrders: "تصدير الطلبات",
+  settingsExportInvoices: "تصدير الفواتير",
+  exportPDF: "تصدير PDF",
+  exportExcel: "تصدير Excel",
 };
 
 export default ar;
