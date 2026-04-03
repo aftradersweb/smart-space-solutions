@@ -81,7 +81,7 @@ const DashboardPage = () => {
 
   // Mobile tab bar for dashboard sections
   const MobileTabBar = () => (
-    <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-hide">
+    <div className="grid grid-cols-4 gap-1 pb-2">
       {sidebarItems.map((item) => (
         <button
           key={item.id}
