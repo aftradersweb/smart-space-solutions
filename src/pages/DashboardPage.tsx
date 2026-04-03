@@ -81,12 +81,12 @@ const DashboardPage = () => {
 
   // Mobile tab bar for dashboard sections
   const MobileTabBar = () => (
-    <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-hide">
+    <div className="grid grid-cols-4 gap-1 pb-2">
       {sidebarItems.map((item) => (
         <button
           key={item.id}
           onClick={() => setTab(item.id)}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs whitespace-nowrap transition-colors shrink-0 ${
+          className={`flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs whitespace-nowrap transition-colors ${
             tab === item.id
               ? "bg-primary/10 text-primary font-medium"
               : "text-muted-foreground hover:text-foreground bg-muted/20"
