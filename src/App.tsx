@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageProvider } from "@/i18n/LanguageContext";
+import { CurrencyProvider } from "@/i18n/CurrencyContext";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import MobileTopBar from "@/components/MobileTopBar";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
@@ -21,6 +22,7 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
+    <CurrencyProvider>
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -42,6 +44,7 @@ const App = () => (
         <PWAInstallPrompt />
       </BrowserRouter>
     </TooltipProvider>
+    </CurrencyProvider>
     </LanguageProvider>
   </QueryClientProvider>
 );
