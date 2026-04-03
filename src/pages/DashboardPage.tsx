@@ -86,7 +86,7 @@ const DashboardPage = () => {
         <button
           key={item.id}
           onClick={() => setTab(item.id)}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs whitespace-nowrap transition-colors shrink-0 ${
+          className={`flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-xs whitespace-nowrap transition-colors ${
             tab === item.id
               ? "bg-primary/10 text-primary font-medium"
               : "text-muted-foreground hover:text-foreground bg-muted/20"
