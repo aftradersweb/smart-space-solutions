@@ -22,6 +22,14 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 
 type Tab = "overview" | "orders" | "spaces" | "pricing" | "users" | "settings";
 
+type SpaceItem = {
+  id: string; name: string; type: string; capacity: string; used: string; percent: number; status: string; active: boolean;
+};
+
+type SpaceStoredItem = {
+  id: string; item: string; owner: string; remainingDays: number; startDate: string; endDate: string;
+};
+
 const AdminPage = () => {
   const [tab, setTab] = useState<Tab>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -29,6 +37,38 @@ const AdminPage = () => {
   const isMobile = useIsMobile();
   const { currency, setCurrency, currencySymbol, formatPrice } = useCurrency();
   const { toast } = useToast();
+
+  // Spaces state
+  const [selectedSpace, setSelectedSpace] = useState<string | null>(null);
+  const [showSpaceForm, setShowSpaceForm] = useState(false);
+  const [editingSpace, setEditingSpace] = useState<SpaceItem | null>(null);
+  const [spaceFormData, setSpaceFormData] = useState({ name: "", type: "", capacity: "" });
+
+  const [spaces, setSpaces] = useState<SpaceItem[]>([
+    { id: "S-01", name: t.adminWarehouseA1, type: t.adminNormal, capacity: `500 ${t.adminSqm}`, used: `380 ${t.adminSqm}`, percent: 76, status: t.adminAvailable, active: true },
+    { id: "S-02", name: t.adminWarehouseACold, type: t.adminCold, capacity: `200 ${t.adminSqm}`, used: `180 ${t.adminSqm}`, percent: 90, status: t.adminAlmostFull, active: true },
+    { id: "S-03", name: t.adminWarehouseBSecurity, type: t.adminHighSecurityType, capacity: `100 ${t.adminSqm}`, used: `45 ${t.adminSqm}`, percent: 45, status: t.adminAvailable, active: true },
+    { id: "S-04", name: t.adminParking, type: t.adminCars, capacity: `50 ${t.adminCar}`, used: `32 ${t.adminCar}`, percent: 64, status: t.adminAvailable, active: false },
+  ]);
+
+  const mockStoredItems: Record<string, SpaceStoredItem[]> = {
+    "S-01": [
+      { id: "ITM-001", item: lang === "ar" ? "أثاث مكتبي" : "Office Furniture", owner: t.adminCompanyAlaman, remainingDays: 45, startDate: "2026-01-15", endDate: "2026-04-15" },
+      { id: "ITM-002", item: lang === "ar" ? "معدات إلكترونية" : "Electronics Equipment", owner: t.adminAhmedMohammed, remainingDays: 20, startDate: "2026-02-01", endDate: "2026-05-01" },
+      { id: "ITM-003", item: lang === "ar" ? "بضائع تجارية" : "Commercial Goods", owner: t.adminCompanyNokhba, remainingDays: 90, startDate: "2026-03-01", endDate: "2026-09-01" },
+    ],
+    "S-02": [
+      { id: "ITM-004", item: lang === "ar" ? "مواد غذائية" : "Food Products", owner: t.adminCompanyAlaman, remainingDays: 10, startDate: "2026-03-15", endDate: "2026-04-15" },
+      { id: "ITM-005", item: lang === "ar" ? "أدوية" : "Medicines", owner: t.adminSaraAhmed, remainingDays: 60, startDate: "2026-02-20", endDate: "2026-06-20" },
+    ],
+    "S-03": [
+      { id: "ITM-006", item: lang === "ar" ? "مستندات سرية" : "Confidential Documents", owner: t.adminCompanyNokhba, remainingDays: 120, startDate: "2026-01-01", endDate: "2026-08-01" },
+    ],
+    "S-04": [
+      { id: "ITM-007", item: lang === "ar" ? "سيارة تويوتا كامري" : "Toyota Camry", owner: t.adminAhmedMohammed, remainingDays: 30, startDate: "2026-03-01", endDate: "2026-06-01" },
+      { id: "ITM-008", item: lang === "ar" ? "سيارة هونداي سوناتا" : "Hyundai Sonata", owner: t.adminSaraAhmed, remainingDays: 55, startDate: "2026-02-10", endDate: "2026-06-10" },
+    ],
+  };
 
   // Settings state
   const [companyInfo, setCompanyInfo] = useState({
