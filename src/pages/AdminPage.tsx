@@ -42,7 +42,7 @@ const AdminPage = () => {
   const [selectedSpace, setSelectedSpace] = useState<string | null>(null);
   const [showSpaceForm, setShowSpaceForm] = useState(false);
   const [editingSpace, setEditingSpace] = useState<SpaceItem | null>(null);
-  const [spaceFormData, setSpaceFormData] = useState({ name: "", type: "", capacity: "" });
+  const [spaceFormData, setSpaceFormData] = useState({ name: "", nameAr: "", type: "", capacity: "" });
 
   const [spaces, setSpaces] = useState<SpaceItem[]>([
     { id: "S-01", name: t.adminWarehouseA1, type: t.adminNormal, capacity: `500 ${t.adminSqm}`, used: `380 ${t.adminSqm}`, percent: 76, status: t.adminAvailable, active: true },
