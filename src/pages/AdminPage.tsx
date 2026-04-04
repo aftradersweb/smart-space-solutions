@@ -23,7 +23,7 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 type Tab = "overview" | "orders" | "spaces" | "pricing" | "users" | "settings";
 
 type SpaceItem = {
-  id: string; name: string; type: string; capacity: string; used: string; percent: number; status: string; active: boolean;
+  id: string; name: string; nameAr: string; type: string; capacity: string; used: string; percent: number; status: string; active: boolean;
 };
 
 type SpaceStoredItem = {
@@ -42,13 +42,13 @@ const AdminPage = () => {
   const [selectedSpace, setSelectedSpace] = useState<string | null>(null);
   const [showSpaceForm, setShowSpaceForm] = useState(false);
   const [editingSpace, setEditingSpace] = useState<SpaceItem | null>(null);
-  const [spaceFormData, setSpaceFormData] = useState({ name: "", type: "", capacity: "" });
+  const [spaceFormData, setSpaceFormData] = useState({ name: "", nameAr: "", type: "", capacity: "" });
 
   const [spaces, setSpaces] = useState<SpaceItem[]>([
-    { id: "S-01", name: t.adminWarehouseA1, type: t.adminNormal, capacity: `500 ${t.adminSqm}`, used: `380 ${t.adminSqm}`, percent: 76, status: t.adminAvailable, active: true },
-    { id: "S-02", name: t.adminWarehouseACold, type: t.adminCold, capacity: `200 ${t.adminSqm}`, used: `180 ${t.adminSqm}`, percent: 90, status: t.adminAlmostFull, active: true },
-    { id: "S-03", name: t.adminWarehouseBSecurity, type: t.adminHighSecurityType, capacity: `100 ${t.adminSqm}`, used: `45 ${t.adminSqm}`, percent: 45, status: t.adminAvailable, active: true },
-    { id: "S-04", name: t.adminParking, type: t.adminCars, capacity: `50 ${t.adminCar}`, used: `32 ${t.adminCar}`, percent: 64, status: t.adminAvailable, active: false },
+    { id: "S-01", name: "Warehouse A - Section 1", nameAr: "المستودع A - القسم 1", type: t.adminNormal, capacity: `500 ${t.adminSqm}`, used: `380 ${t.adminSqm}`, percent: 76, status: t.adminAvailable, active: true },
+    { id: "S-02", name: "Warehouse A - Cold", nameAr: "المستودع A - التبريد", type: t.adminCold, capacity: `200 ${t.adminSqm}`, used: `180 ${t.adminSqm}`, percent: 90, status: t.adminAlmostFull, active: true },
+    { id: "S-03", name: "Warehouse B - Security", nameAr: "المستودع B - الأمان", type: t.adminHighSecurityType, capacity: `100 ${t.adminSqm}`, used: `45 ${t.adminSqm}`, percent: 45, status: t.adminAvailable, active: true },
+    { id: "S-04", name: "Parking Lot", nameAr: "موقف السيارات", type: t.adminCars, capacity: `50 ${t.adminCar}`, used: `32 ${t.adminCar}`, percent: 64, status: t.adminAvailable, active: false },
   ]);
 
   const mockStoredItems: Record<string, SpaceStoredItem[]> = {
@@ -257,7 +257,7 @@ const AdminPage = () => {
             {mockSpaces.map((s) => (
               <div key={s.id}>
                 <div className="flex justify-between text-xs md:text-sm mb-1">
-                  <span className="text-foreground font-medium">{s.name}</span>
+                  <span className="text-foreground font-medium">{lang === "ar" ? s.nameAr || s.name : s.name}</span>
                   <span className="text-muted-foreground">{s.percent}%</span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -374,23 +374,23 @@ const AdminPage = () => {
 
   const handleAddSpace = () => {
     setEditingSpace(null);
-    setSpaceFormData({ name: "", type: "", capacity: "" });
+    setSpaceFormData({ name: "", nameAr: "", type: "", capacity: "" });
     setShowSpaceForm(true);
   };
 
   const handleEditSpace = (s: SpaceItem) => {
     setEditingSpace(s);
-    setSpaceFormData({ name: s.name, type: s.type, capacity: s.capacity });
+    setSpaceFormData({ name: s.name, nameAr: s.nameAr, type: s.type, capacity: s.capacity });
     setShowSpaceForm(true);
   };
 
   const handleSaveSpace = () => {
     if (!spaceFormData.name) return;
     if (editingSpace) {
-      setSpaces(prev => prev.map(s => s.id === editingSpace.id ? { ...s, name: spaceFormData.name, type: spaceFormData.type, capacity: spaceFormData.capacity } : s));
+      setSpaces(prev => prev.map(s => s.id === editingSpace.id ? { ...s, name: spaceFormData.name, nameAr: spaceFormData.nameAr, type: spaceFormData.type, capacity: spaceFormData.capacity } : s));
     } else {
       const newId = `S-${String(spaces.length + 1).padStart(2, "0")}`;
-      setSpaces(prev => [...prev, { id: newId, name: spaceFormData.name, type: spaceFormData.type, capacity: spaceFormData.capacity, used: "0", percent: 0, status: t.adminAvailable, active: true }]);
+      setSpaces(prev => [...prev, { id: newId, name: spaceFormData.name, nameAr: spaceFormData.nameAr, type: spaceFormData.type, capacity: spaceFormData.capacity, used: "0", percent: 0, status: t.adminAvailable, active: true }]);
     }
     setShowSpaceForm(false);
     toast({ title: t.settingsSaved });
@@ -409,7 +409,7 @@ const AdminPage = () => {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h2 className="text-base md:text-xl font-bold text-foreground">{space.name}</h2>
+            <h2 className="text-base md:text-xl font-bold text-foreground">{lang === "ar" ? space.nameAr || space.name : space.name}</h2>
             <p className="text-xs text-muted-foreground">{t.adminSpaceDetails}</p>
           </div>
         </div>
@@ -418,7 +418,7 @@ const AdminPage = () => {
         <div className="glass rounded-xl p-4 md:p-6">
           <h3 className="font-bold text-foreground text-sm md:text-base mb-4">{t.adminSpaceInfo}</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs md:text-sm">
-            <div><span className="text-muted-foreground block">{t.adminSpaceName}</span><span className="text-foreground font-medium">{space.name}</span></div>
+            <div><span className="text-muted-foreground block">{t.adminSpaceName}</span><span className="text-foreground font-medium">{lang === "ar" ? space.nameAr || space.name : space.name}</span></div>
             <div><span className="text-muted-foreground block">{t.adminSpaceType}</span><span className="text-foreground font-medium">{space.type}</span></div>
             <div><span className="text-muted-foreground block">{t.adminSpaceCapacity}</span><span className="text-foreground font-medium">{space.capacity}</span></div>
             <div><span className="text-muted-foreground block">{t.adminSpaceUsed}</span><span className="text-foreground font-medium">{space.used}</span></div>
@@ -502,8 +502,12 @@ const AdminPage = () => {
           <h3 className="font-bold text-foreground text-base">{editingSpace ? t.adminEditSpaceTitle : t.adminAddSpaceTitle}</h3>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">{t.adminSpaceName}</label>
-              <Input value={spaceFormData.name} onChange={e => setSpaceFormData({ ...spaceFormData, name: e.target.value })} />
+              <label className="text-xs text-muted-foreground">{t.adminSpaceName} ({lang === "ar" ? "English" : "EN"})</label>
+              <Input value={spaceFormData.name} onChange={e => setSpaceFormData({ ...spaceFormData, name: e.target.value })} placeholder={lang === "ar" ? "e.g. Warehouse A" : "e.g. Warehouse A"} />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{t.adminSpaceName} ({lang === "ar" ? "عربي" : "AR"})</label>
+              <Input value={spaceFormData.nameAr} onChange={e => setSpaceFormData({ ...spaceFormData, nameAr: e.target.value })} placeholder={lang === "ar" ? "مثال: المستودع أ" : "e.g. المستودع أ"} dir="rtl" />
             </div>
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground">{t.adminSpaceType}</label>
@@ -548,7 +552,7 @@ const AdminPage = () => {
             <div key={s.id} className={`glass rounded-xl p-4 md:p-6 cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all ${!s.active ? "opacity-60" : ""}`}
               onClick={() => setSelectedSpace(s.id)}>
               <div className="flex items-center justify-between mb-3 md:mb-4">
-                <h3 className="font-bold text-foreground text-sm md:text-base">{s.name}</h3>
+                <h3 className="font-bold text-foreground text-sm md:text-base">{lang === "ar" ? s.nameAr || s.name : s.name}</h3>
                 <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                   <Badge className={`${statusColor(s.status)} border-none text-[10px] md:text-xs`}>{s.status}</Badge>
                 </div>
