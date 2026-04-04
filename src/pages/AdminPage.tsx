@@ -89,12 +89,7 @@ const AdminPage = () => {
     { id: "ORD-004", client: t.adminSaraAhmed, type: t.adminHazardous, area: `5 ${t.adminSqm}`, duration: `2 ${t.adminMonth}`, totalSar: 3000, status: t.adminRejected, date: "2026-03-05" },
   ];
 
-  const mockSpaces = [
-    { id: "S-01", name: t.adminWarehouseA1, type: t.adminNormal, capacity: `500 ${t.adminSqm}`, used: `380 ${t.adminSqm}`, percent: 76, status: t.adminAvailable },
-    { id: "S-02", name: t.adminWarehouseACold, type: t.adminCold, capacity: `200 ${t.adminSqm}`, used: `180 ${t.adminSqm}`, percent: 90, status: t.adminAlmostFull },
-    { id: "S-03", name: t.adminWarehouseBSecurity, type: t.adminHighSecurityType, capacity: `100 ${t.adminSqm}`, used: `45 ${t.adminSqm}`, percent: 45, status: t.adminAvailable },
-    { id: "S-04", name: t.adminParking, type: t.adminCars, capacity: `50 ${t.adminCar}`, used: `32 ${t.adminCar}`, percent: 64, status: t.adminAvailable },
-  ];
+  const mockSpaces = spaces;
 
   const mockPricing = [
     { type: t.adminNormalStorage, pricePerM2: 50, minArea: 5, minDuration: 1 },
