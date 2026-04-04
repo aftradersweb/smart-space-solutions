@@ -472,6 +472,32 @@ const en = {
   settingsExportInvoices: "Export Invoices",
   exportPDF: "Export PDF",
   exportExcel: "Export Excel",
+
+  // Spaces management
+  adminAddSpace: "Add Space",
+  adminEditSpace: "Edit Space",
+  adminDeleteSpace: "Delete",
+  adminActivateSpace: "Active",
+  adminDeactivateSpace: "Inactive",
+  adminSpaceDetails: "Space Details",
+  adminSpaceInfo: "Space Information",
+  adminSpaceName: "Space Name",
+  adminBackToSpaces: "Back to Spaces",
+  adminRelatedItems: "Related Items",
+  adminThItemId: "Item ID",
+  adminThItem: "Item",
+  adminThOwner: "Owner",
+  adminThRemainingDuration: "Remaining Duration",
+  adminThStartDate: "Start Date",
+  adminThEndDate: "End Date",
+  adminSpaceActive: "Active",
+  adminSpaceInactive: "Inactive",
+  adminDays: "days",
+  adminAddSpaceTitle: "Add New Space",
+  adminEditSpaceTitle: "Edit Space",
+  adminCancel: "Cancel",
+  adminSave: "Save",
+  adminCapacity: "Capacity",
 };
 
 export default en;

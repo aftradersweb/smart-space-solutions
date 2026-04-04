@@ -5,8 +5,10 @@ import {
   Users, Search, Bell, User, LogOut, ChevronLeft, Eye,
   CheckCircle, XCircle, Clock, MoreVertical, TrendingUp, Package, Globe,
   Settings, Save, Download, FileText, FileSpreadsheet,
-  Twitter, Instagram, Facebook, Linkedin, MessageCircle
+  Twitter, Instagram, Facebook, Linkedin, MessageCircle,
+  Plus, Pencil, ArrowLeft, Power
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +22,14 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 
 type Tab = "overview" | "orders" | "spaces" | "pricing" | "users" | "settings";
 
+type SpaceItem = {
+  id: string; name: string; type: string; capacity: string; used: string; percent: number; status: string; active: boolean;
+};
+
+type SpaceStoredItem = {
+  id: string; item: string; owner: string; remainingDays: number; startDate: string; endDate: string;
+};
+
 const AdminPage = () => {
   const [tab, setTab] = useState<Tab>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -27,6 +37,38 @@ const AdminPage = () => {
   const isMobile = useIsMobile();
   const { currency, setCurrency, currencySymbol, formatPrice } = useCurrency();
   const { toast } = useToast();
+
+  // Spaces state
+  const [selectedSpace, setSelectedSpace] = useState<string | null>(null);
+  const [showSpaceForm, setShowSpaceForm] = useState(false);
+  const [editingSpace, setEditingSpace] = useState<SpaceItem | null>(null);
+  const [spaceFormData, setSpaceFormData] = useState({ name: "", type: "", capacity: "" });
+
+  const [spaces, setSpaces] = useState<SpaceItem[]>([
+    { id: "S-01", name: t.adminWarehouseA1, type: t.adminNormal, capacity: `500 ${t.adminSqm}`, used: `380 ${t.adminSqm}`, percent: 76, status: t.adminAvailable, active: true },
+    { id: "S-02", name: t.adminWarehouseACold, type: t.adminCold, capacity: `200 ${t.adminSqm}`, used: `180 ${t.adminSqm}`, percent: 90, status: t.adminAlmostFull, active: true },
+    { id: "S-03", name: t.adminWarehouseBSecurity, type: t.adminHighSecurityType, capacity: `100 ${t.adminSqm}`, used: `45 ${t.adminSqm}`, percent: 45, status: t.adminAvailable, active: true },
+    { id: "S-04", name: t.adminParking, type: t.adminCars, capacity: `50 ${t.adminCar}`, used: `32 ${t.adminCar}`, percent: 64, status: t.adminAvailable, active: false },
+  ]);
+
+  const mockStoredItems: Record<string, SpaceStoredItem[]> = {
+    "S-01": [
+      { id: "ITM-001", item: lang === "ar" ? "أثاث مكتبي" : "Office Furniture", owner: t.adminCompanyAlaman, remainingDays: 45, startDate: "2026-01-15", endDate: "2026-04-15" },
+      { id: "ITM-002", item: lang === "ar" ? "معدات إلكترونية" : "Electronics Equipment", owner: t.adminAhmedMohammed, remainingDays: 20, startDate: "2026-02-01", endDate: "2026-05-01" },
+      { id: "ITM-003", item: lang === "ar" ? "بضائع تجارية" : "Commercial Goods", owner: t.adminCompanyNokhba, remainingDays: 90, startDate: "2026-03-01", endDate: "2026-09-01" },
+    ],
+    "S-02": [
+      { id: "ITM-004", item: lang === "ar" ? "مواد غذائية" : "Food Products", owner: t.adminCompanyAlaman, remainingDays: 10, startDate: "2026-03-15", endDate: "2026-04-15" },
+      { id: "ITM-005", item: lang === "ar" ? "أدوية" : "Medicines", owner: t.adminSaraAhmed, remainingDays: 60, startDate: "2026-02-20", endDate: "2026-06-20" },
+    ],
+    "S-03": [
+      { id: "ITM-006", item: lang === "ar" ? "مستندات سرية" : "Confidential Documents", owner: t.adminCompanyNokhba, remainingDays: 120, startDate: "2026-01-01", endDate: "2026-08-01" },
+    ],
+    "S-04": [
+      { id: "ITM-007", item: lang === "ar" ? "سيارة تويوتا كامري" : "Toyota Camry", owner: t.adminAhmedMohammed, remainingDays: 30, startDate: "2026-03-01", endDate: "2026-06-01" },
+      { id: "ITM-008", item: lang === "ar" ? "سيارة هونداي سوناتا" : "Hyundai Sonata", owner: t.adminSaraAhmed, remainingDays: 55, startDate: "2026-02-10", endDate: "2026-06-10" },
+    ],
+  };
 
   // Settings state
   const [companyInfo, setCompanyInfo] = useState({
@@ -47,12 +89,7 @@ const AdminPage = () => {
     { id: "ORD-004", client: t.adminSaraAhmed, type: t.adminHazardous, area: `5 ${t.adminSqm}`, duration: `2 ${t.adminMonth}`, totalSar: 3000, status: t.adminRejected, date: "2026-03-05" },
   ];
 
-  const mockSpaces = [
-    { id: "S-01", name: t.adminWarehouseA1, type: t.adminNormal, capacity: `500 ${t.adminSqm}`, used: `380 ${t.adminSqm}`, percent: 76, status: t.adminAvailable },
-    { id: "S-02", name: t.adminWarehouseACold, type: t.adminCold, capacity: `200 ${t.adminSqm}`, used: `180 ${t.adminSqm}`, percent: 90, status: t.adminAlmostFull },
-    { id: "S-03", name: t.adminWarehouseBSecurity, type: t.adminHighSecurityType, capacity: `100 ${t.adminSqm}`, used: `45 ${t.adminSqm}`, percent: 45, status: t.adminAvailable },
-    { id: "S-04", name: t.adminParking, type: t.adminCars, capacity: `50 ${t.adminCar}`, used: `32 ${t.adminCar}`, percent: 64, status: t.adminAvailable },
-  ];
+  const mockSpaces = spaces;
 
   const mockPricing = [
     { type: t.adminNormalStorage, pricePerM2: 50, minArea: 5, minDuration: 1 },
@@ -331,34 +368,223 @@ const AdminPage = () => {
     );
   };
 
-  // ─── Spaces ───
-  const SpacesContent = () => (
-    <div>
-      <h2 className="text-base md:text-xl font-bold text-foreground mb-4 md:mb-6">{t.adminManageSpaces}</h2>
-      <div className="grid sm:grid-cols-2 gap-4 md:gap-6">
-        {mockSpaces.map((s) => (
-          <div key={s.id} className="glass rounded-xl p-4 md:p-6">
-            <div className="flex items-center justify-between mb-3 md:mb-4">
-              <h3 className="font-bold text-foreground text-sm md:text-base">{s.name}</h3>
-              <Badge className={`${statusColor(s.status)} border-none text-[10px] md:text-xs`}>{s.status}</Badge>
+  const toggleSpaceActive = (id: string) => {
+    setSpaces(prev => prev.map(s => s.id === id ? { ...s, active: !s.active } : s));
+  };
+
+  const handleAddSpace = () => {
+    setEditingSpace(null);
+    setSpaceFormData({ name: "", type: "", capacity: "" });
+    setShowSpaceForm(true);
+  };
+
+  const handleEditSpace = (s: SpaceItem) => {
+    setEditingSpace(s);
+    setSpaceFormData({ name: s.name, type: s.type, capacity: s.capacity });
+    setShowSpaceForm(true);
+  };
+
+  const handleSaveSpace = () => {
+    if (!spaceFormData.name) return;
+    if (editingSpace) {
+      setSpaces(prev => prev.map(s => s.id === editingSpace.id ? { ...s, name: spaceFormData.name, type: spaceFormData.type, capacity: spaceFormData.capacity } : s));
+    } else {
+      const newId = `S-${String(spaces.length + 1).padStart(2, "0")}`;
+      setSpaces(prev => [...prev, { id: newId, name: spaceFormData.name, type: spaceFormData.type, capacity: spaceFormData.capacity, used: "0", percent: 0, status: t.adminAvailable, active: true }]);
+    }
+    setShowSpaceForm(false);
+    toast({ title: t.settingsSaved });
+  };
+
+  // ─── Space Details View ───
+  const SpaceDetailsContent = () => {
+    const space = spaces.find(s => s.id === selectedSpace);
+    if (!space) return null;
+    const items = mockStoredItems[space.id] || [];
+
+    return (
+      <div className="space-y-4 md:space-y-6">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setSelectedSpace(null)} className="p-2 rounded-lg hover:bg-muted/30 text-muted-foreground">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h2 className="text-base md:text-xl font-bold text-foreground">{space.name}</h2>
+            <p className="text-xs text-muted-foreground">{t.adminSpaceDetails}</p>
+          </div>
+        </div>
+
+        {/* Space Info Card */}
+        <div className="glass rounded-xl p-4 md:p-6">
+          <h3 className="font-bold text-foreground text-sm md:text-base mb-4">{t.adminSpaceInfo}</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs md:text-sm">
+            <div><span className="text-muted-foreground block">{t.adminSpaceName}</span><span className="text-foreground font-medium">{space.name}</span></div>
+            <div><span className="text-muted-foreground block">{t.adminSpaceType}</span><span className="text-foreground font-medium">{space.type}</span></div>
+            <div><span className="text-muted-foreground block">{t.adminSpaceCapacity}</span><span className="text-foreground font-medium">{space.capacity}</span></div>
+            <div><span className="text-muted-foreground block">{t.adminSpaceUsed}</span><span className="text-foreground font-medium">{space.used}</span></div>
+            <div><span className="text-muted-foreground block">{t.adminSpaceOccupancy}</span><span className="text-primary font-bold">{space.percent}%</span></div>
+            <div><span className="text-muted-foreground block">{t.adminThStatus}</span>
+              <Badge className={`${statusColor(space.status)} border-none text-[10px] md:text-xs mt-1`}>{space.status}</Badge>
             </div>
-            <div className="grid grid-cols-2 gap-3 md:gap-4 text-xs md:text-sm mb-3 md:mb-4">
-              <div><span className="text-muted-foreground">{t.adminSpaceType}</span> <span className="text-foreground font-medium">{s.type}</span></div>
-              <div><span className="text-muted-foreground">{t.adminSpaceCapacity}</span> <span className="text-foreground font-medium">{s.capacity}</span></div>
-              <div><span className="text-muted-foreground">{t.adminSpaceUsed}</span> <span className="text-foreground font-medium">{s.used}</span></div>
-              <div><span className="text-muted-foreground">{t.adminSpaceOccupancy}</span> <span className="text-primary font-bold">{s.percent}%</span></div>
-            </div>
-            <div className="h-2 md:h-3 bg-muted rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${s.percent > 85 ? "bg-red-500" : s.percent > 60 ? "bg-amber-500" : "bg-emerald-500"}`}
-                style={{ width: `${s.percent}%` }}
-              />
+            <div><span className="text-muted-foreground block">{t.adminActivateSpace}</span>
+              <Badge className={`${space.active ? "bg-emerald-500/20 text-emerald-400" : "bg-muted text-muted-foreground"} border-none text-[10px] md:text-xs mt-1`}>
+                {space.active ? t.adminSpaceActive : t.adminSpaceInactive}
+              </Badge>
             </div>
           </div>
-        ))}
+          <div className="mt-4 h-2 md:h-3 bg-muted rounded-full overflow-hidden">
+            <div className={`h-full rounded-full transition-all ${space.percent > 85 ? "bg-red-500" : space.percent > 60 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${space.percent}%` }} />
+          </div>
+        </div>
+
+        {/* Related Items Table */}
+        <div className="glass rounded-xl p-4 md:p-6">
+          <h3 className="font-bold text-foreground text-sm md:text-base mb-4">{t.adminRelatedItems} ({items.length})</h3>
+          {items.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">{lang === "ar" ? "لا توجد عناصر مخزنة" : "No stored items"}</p>
+          ) : isMobile ? (
+            <div className="space-y-3">
+              {items.map(item => (
+                <div key={item.id} className="bg-muted/20 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-primary text-xs">{item.id}</span>
+                    <Badge className={`${item.remainingDays <= 15 ? "bg-red-500/20 text-red-400" : item.remainingDays <= 30 ? "bg-amber-500/20 text-amber-400" : "bg-emerald-500/20 text-emerald-400"} border-none text-[10px]`}>
+                      {item.remainingDays} {t.adminDays}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div><span className="text-muted-foreground">{t.adminThItem}</span><p className="text-foreground mt-0.5">{item.item}</p></div>
+                    <div><span className="text-muted-foreground">{t.adminThOwner}</span><p className="text-foreground mt-0.5">{item.owner}</p></div>
+                    <div><span className="text-muted-foreground">{t.adminThStartDate}</span><p className="text-foreground mt-0.5">{item.startDate}</p></div>
+                    <div><span className="text-muted-foreground">{t.adminThEndDate}</span><p className="text-foreground mt-0.5">{item.endDate}</p></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border">
+                  {[t.adminThItemId, t.adminThItem, t.adminThOwner, t.adminThRemainingDuration, t.adminThStartDate, t.adminThEndDate].map(h => (
+                    <th key={h} className={`${textAlign} p-3 text-sm font-medium text-muted-foreground`}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {items.map(item => (
+                  <tr key={item.id} className="border-b border-border/50 hover:bg-muted/10">
+                    <td className="p-3 font-medium text-primary text-sm">{item.id}</td>
+                    <td className="p-3 text-foreground text-sm">{item.item}</td>
+                    <td className="p-3 text-muted-foreground text-sm">{item.owner}</td>
+                    <td className="p-3">
+                      <Badge className={`${item.remainingDays <= 15 ? "bg-red-500/20 text-red-400" : item.remainingDays <= 30 ? "bg-amber-500/20 text-amber-400" : "bg-emerald-500/20 text-emerald-400"} border-none text-xs`}>
+                        {item.remainingDays} {t.adminDays}
+                      </Badge>
+                    </td>
+                    <td className="p-3 text-muted-foreground text-sm">{item.startDate}</td>
+                    <td className="p-3 text-muted-foreground text-sm">{item.endDate}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
+
+  // ─── Space Form Modal ───
+  const SpaceFormModal = () => {
+    if (!showSpaceForm) return null;
+    return (
+      <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setShowSpaceForm(false)}>
+        <div className="bg-card rounded-xl p-6 w-full max-w-md space-y-4 border border-border" onClick={e => e.stopPropagation()}>
+          <h3 className="font-bold text-foreground text-base">{editingSpace ? t.adminEditSpaceTitle : t.adminAddSpaceTitle}</h3>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{t.adminSpaceName}</label>
+              <Input value={spaceFormData.name} onChange={e => setSpaceFormData({ ...spaceFormData, name: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{t.adminSpaceType}</label>
+              <Select value={spaceFormData.type} onValueChange={v => setSpaceFormData({ ...spaceFormData, type: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={t.adminNormal}>{t.adminNormal}</SelectItem>
+                  <SelectItem value={t.adminCold}>{t.adminCold}</SelectItem>
+                  <SelectItem value={t.adminHighSecurityType}>{t.adminHighSecurityType}</SelectItem>
+                  <SelectItem value={t.adminCars}>{t.adminCars}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{t.adminCapacity}</label>
+              <Input value={spaceFormData.capacity} onChange={e => setSpaceFormData({ ...spaceFormData, capacity: e.target.value })} placeholder={`100 ${t.adminSqm}`} />
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" size="sm" onClick={() => setShowSpaceForm(false)}>{t.adminCancel}</Button>
+            <Button size="sm" onClick={handleSaveSpace}>{t.adminSave}</Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ─── Spaces ───
+  const SpacesContent = () => {
+    if (selectedSpace) return <SpaceDetailsContent />;
+
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-4 md:mb-6">
+          <h2 className="text-base md:text-xl font-bold text-foreground">{t.adminManageSpaces}</h2>
+          <Button size="sm" onClick={handleAddSpace} className="gap-1.5">
+            <Plus className="w-4 h-4" />{t.adminAddSpace}
+          </Button>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-4 md:gap-6">
+          {spaces.map((s) => (
+            <div key={s.id} className={`glass rounded-xl p-4 md:p-6 cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all ${!s.active ? "opacity-60" : ""}`}
+              onClick={() => setSelectedSpace(s.id)}>
+              <div className="flex items-center justify-between mb-3 md:mb-4">
+                <h3 className="font-bold text-foreground text-sm md:text-base">{s.name}</h3>
+                <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                  <Badge className={`${statusColor(s.status)} border-none text-[10px] md:text-xs`}>{s.status}</Badge>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 md:gap-4 text-xs md:text-sm mb-3 md:mb-4">
+                <div><span className="text-muted-foreground">{t.adminSpaceType}</span> <span className="text-foreground font-medium">{s.type}</span></div>
+                <div><span className="text-muted-foreground">{t.adminSpaceCapacity}</span> <span className="text-foreground font-medium">{s.capacity}</span></div>
+                <div><span className="text-muted-foreground">{t.adminSpaceUsed}</span> <span className="text-foreground font-medium">{s.used}</span></div>
+                <div><span className="text-muted-foreground">{t.adminSpaceOccupancy}</span> <span className="text-primary font-bold">{s.percent}%</span></div>
+              </div>
+              <div className="h-2 md:h-3 bg-muted rounded-full overflow-hidden mb-3">
+                <div className={`h-full rounded-full transition-all ${s.percent > 85 ? "bg-red-500" : s.percent > 60 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${s.percent}%` }} />
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-border/50" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center gap-2">
+                  <Switch checked={s.active} onCheckedChange={() => toggleSpaceActive(s.id)} />
+                  <span className={`text-xs ${s.active ? "text-emerald-400" : "text-muted-foreground"}`}>
+                    {s.active ? t.adminSpaceActive : t.adminSpaceInactive}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => handleEditSpace(s)} className="p-1.5 rounded-lg hover:bg-muted/30 text-muted-foreground">
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => setSelectedSpace(s.id)} className="p-1.5 rounded-lg hover:bg-muted/30 text-primary">
+                    <Eye className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <SpaceFormModal />
+      </div>
+    );
+  };
 
   // ─── Pricing ───
   const PricingContent = () => {

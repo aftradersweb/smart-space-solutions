@@ -472,6 +472,32 @@ const ar = {
   settingsExportInvoices: "تصدير الفواتير",
   exportPDF: "تصدير PDF",
   exportExcel: "تصدير Excel",
+
+  // Spaces management
+  adminAddSpace: "إضافة مساحة",
+  adminEditSpace: "تعديل المساحة",
+  adminDeleteSpace: "حذف",
+  adminActivateSpace: "نشط",
+  adminDeactivateSpace: "غير نشط",
+  adminSpaceDetails: "تفاصيل المساحة",
+  adminSpaceInfo: "معلومات المساحة",
+  adminSpaceName: "اسم المساحة",
+  adminBackToSpaces: "العودة للمساحات",
+  adminRelatedItems: "العناصر المرتبطة",
+  adminThItemId: "رقم العنصر",
+  adminThItem: "العنصر",
+  adminThOwner: "المالك",
+  adminThRemainingDuration: "المدة المتبقية",
+  adminThStartDate: "تاريخ البدء",
+  adminThEndDate: "تاريخ الانتهاء",
+  adminSpaceActive: "نشط",
+  adminSpaceInactive: "غير نشط",
+  adminDays: "يوم",
+  adminAddSpaceTitle: "إضافة مساحة جديدة",
+  adminEditSpaceTitle: "تعديل المساحة",
+  adminCancel: "إلغاء",
+  adminSave: "حفظ",
+  adminCapacity: "السعة",
 };
 
 export default ar;
