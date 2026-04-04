@@ -409,7 +409,7 @@ const AdminPage = () => {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h2 className="text-base md:text-xl font-bold text-foreground">{space.name}</h2>
+            <h2 className="text-base md:text-xl font-bold text-foreground">{lang === "ar" ? space.nameAr || space.name : space.name}</h2>
             <p className="text-xs text-muted-foreground">{t.adminSpaceDetails}</p>
           </div>
         </div>
