@@ -45,10 +45,10 @@ const AdminPage = () => {
   const [spaceFormData, setSpaceFormData] = useState({ name: "", nameAr: "", type: "", capacity: "" });
 
   const [spaces, setSpaces] = useState<SpaceItem[]>([
-    { id: "S-01", name: t.adminWarehouseA1, type: t.adminNormal, capacity: `500 ${t.adminSqm}`, used: `380 ${t.adminSqm}`, percent: 76, status: t.adminAvailable, active: true },
-    { id: "S-02", name: t.adminWarehouseACold, type: t.adminCold, capacity: `200 ${t.adminSqm}`, used: `180 ${t.adminSqm}`, percent: 90, status: t.adminAlmostFull, active: true },
-    { id: "S-03", name: t.adminWarehouseBSecurity, type: t.adminHighSecurityType, capacity: `100 ${t.adminSqm}`, used: `45 ${t.adminSqm}`, percent: 45, status: t.adminAvailable, active: true },
-    { id: "S-04", name: t.adminParking, type: t.adminCars, capacity: `50 ${t.adminCar}`, used: `32 ${t.adminCar}`, percent: 64, status: t.adminAvailable, active: false },
+    { id: "S-01", name: "Warehouse A - Section 1", nameAr: "المستودع A - القسم 1", type: t.adminNormal, capacity: `500 ${t.adminSqm}`, used: `380 ${t.adminSqm}`, percent: 76, status: t.adminAvailable, active: true },
+    { id: "S-02", name: "Warehouse A - Cold", nameAr: "المستودع A - التبريد", type: t.adminCold, capacity: `200 ${t.adminSqm}`, used: `180 ${t.adminSqm}`, percent: 90, status: t.adminAlmostFull, active: true },
+    { id: "S-03", name: "Warehouse B - Security", nameAr: "المستودع B - الأمان", type: t.adminHighSecurityType, capacity: `100 ${t.adminSqm}`, used: `45 ${t.adminSqm}`, percent: 45, status: t.adminAvailable, active: true },
+    { id: "S-04", name: "Parking Lot", nameAr: "موقف السيارات", type: t.adminCars, capacity: `50 ${t.adminCar}`, used: `32 ${t.adminCar}`, percent: 64, status: t.adminAvailable, active: false },
   ]);
 
   const mockStoredItems: Record<string, SpaceStoredItem[]> = {
