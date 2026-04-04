@@ -418,7 +418,7 @@ const AdminPage = () => {
         <div className="glass rounded-xl p-4 md:p-6">
           <h3 className="font-bold text-foreground text-sm md:text-base mb-4">{t.adminSpaceInfo}</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs md:text-sm">
-            <div><span className="text-muted-foreground block">{t.adminSpaceName}</span><span className="text-foreground font-medium">{space.name}</span></div>
+            <div><span className="text-muted-foreground block">{t.adminSpaceName}</span><span className="text-foreground font-medium">{lang === "ar" ? space.nameAr || space.name : space.name}</span></div>
             <div><span className="text-muted-foreground block">{t.adminSpaceType}</span><span className="text-foreground font-medium">{space.type}</span></div>
             <div><span className="text-muted-foreground block">{t.adminSpaceCapacity}</span><span className="text-foreground font-medium">{space.capacity}</span></div>
             <div><span className="text-muted-foreground block">{t.adminSpaceUsed}</span><span className="text-foreground font-medium">{space.used}</span></div>
