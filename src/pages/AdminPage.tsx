@@ -23,7 +23,7 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 type Tab = "overview" | "orders" | "spaces" | "pricing" | "users" | "settings";
 
 type SpaceItem = {
-  id: string; name: string; type: string; capacity: string; used: string; percent: number; status: string; active: boolean;
+  id: string; name: string; nameAr: string; type: string; capacity: string; used: string; percent: number; status: string; active: boolean;
 };
 
 type SpaceStoredItem = {
