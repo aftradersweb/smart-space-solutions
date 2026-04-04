@@ -374,23 +374,23 @@ const AdminPage = () => {
 
   const handleAddSpace = () => {
     setEditingSpace(null);
-    setSpaceFormData({ name: "", type: "", capacity: "" });
+    setSpaceFormData({ name: "", nameAr: "", type: "", capacity: "" });
     setShowSpaceForm(true);
   };
 
   const handleEditSpace = (s: SpaceItem) => {
     setEditingSpace(s);
-    setSpaceFormData({ name: s.name, type: s.type, capacity: s.capacity });
+    setSpaceFormData({ name: s.name, nameAr: s.nameAr, type: s.type, capacity: s.capacity });
     setShowSpaceForm(true);
   };
 
   const handleSaveSpace = () => {
     if (!spaceFormData.name) return;
     if (editingSpace) {
-      setSpaces(prev => prev.map(s => s.id === editingSpace.id ? { ...s, name: spaceFormData.name, type: spaceFormData.type, capacity: spaceFormData.capacity } : s));
+      setSpaces(prev => prev.map(s => s.id === editingSpace.id ? { ...s, name: spaceFormData.name, nameAr: spaceFormData.nameAr, type: spaceFormData.type, capacity: spaceFormData.capacity } : s));
     } else {
       const newId = `S-${String(spaces.length + 1).padStart(2, "0")}`;
-      setSpaces(prev => [...prev, { id: newId, name: spaceFormData.name, type: spaceFormData.type, capacity: spaceFormData.capacity, used: "0", percent: 0, status: t.adminAvailable, active: true }]);
+      setSpaces(prev => [...prev, { id: newId, name: spaceFormData.name, nameAr: spaceFormData.nameAr, type: spaceFormData.type, capacity: spaceFormData.capacity, used: "0", percent: 0, status: t.adminAvailable, active: true }]);
     }
     setShowSpaceForm(false);
     toast({ title: t.settingsSaved });
