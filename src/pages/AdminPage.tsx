@@ -257,7 +257,7 @@ const AdminPage = () => {
             {mockSpaces.map((s) => (
               <div key={s.id}>
                 <div className="flex justify-between text-xs md:text-sm mb-1">
-                  <span className="text-foreground font-medium">{s.name}</span>
+                  <span className="text-foreground font-medium">{lang === "ar" ? s.nameAr || s.name : s.name}</span>
                   <span className="text-muted-foreground">{s.percent}%</span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
