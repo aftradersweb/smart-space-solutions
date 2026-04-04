@@ -5,8 +5,10 @@ import {
   Users, Search, Bell, User, LogOut, ChevronLeft, Eye,
   CheckCircle, XCircle, Clock, MoreVertical, TrendingUp, Package, Globe,
   Settings, Save, Download, FileText, FileSpreadsheet,
-  Twitter, Instagram, Facebook, Linkedin, MessageCircle
+  Twitter, Instagram, Facebook, Linkedin, MessageCircle,
+  Plus, Pencil, ArrowLeft, Power
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
