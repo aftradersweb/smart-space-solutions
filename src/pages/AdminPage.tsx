@@ -552,7 +552,7 @@ const AdminPage = () => {
             <div key={s.id} className={`glass rounded-xl p-4 md:p-6 cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all ${!s.active ? "opacity-60" : ""}`}
               onClick={() => setSelectedSpace(s.id)}>
               <div className="flex items-center justify-between mb-3 md:mb-4">
-                <h3 className="font-bold text-foreground text-sm md:text-base">{s.name}</h3>
+                <h3 className="font-bold text-foreground text-sm md:text-base">{lang === "ar" ? s.nameAr || s.name : s.name}</h3>
                 <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                   <Badge className={`${statusColor(s.status)} border-none text-[10px] md:text-xs`}>{s.status}</Badge>
                 </div>
