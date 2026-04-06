@@ -87,10 +87,10 @@ const AdminPage = () => {
   });
 
   const mockAdminOrders = [
-    { id: "ORD-001", client: t.adminCompanyAlaman, type: t.adminNormalStorage, area: `20 ${t.adminSqm}`, duration: `3 ${t.adminMonths}`, totalSar: 4500, status: t.adminUnderReview, date: "2026-03-20" },
-    { id: "ORD-002", client: t.adminAhmedMohammed, type: t.adminColdStorage, area: `30 ${t.adminSqm}`, duration: `1 ${t.adminMonth}`, totalSar: 3600, status: t.adminApproved, date: "2026-03-18" },
-    { id: "ORD-003", client: t.adminCompanyNokhba, type: t.adminCarStorage, area: "-", duration: `6 ${t.adminMonths}`, totalSar: 3000, status: t.adminCompleted, date: "2026-03-10" },
-    { id: "ORD-004", client: t.adminSaraAhmed, type: t.adminHazardous, area: `5 ${t.adminSqm}`, duration: `2 ${t.adminMonth}`, totalSar: 3000, status: t.adminRejected, date: "2026-03-05" },
+    { id: "ORD-001", client: t.adminCompanyAlaman, type: t.adminNormalStorage, area: `20 ${t.adminSqm}`, duration: `3 ${t.adminMonths}`, totalSar: 4500, status: t.adminUnderReview, date: "2026-03-20", extras: [t.nrPickup, t.nrInsurance], notes: lang === "ar" ? "أثاث مكتبي - يحتاج مساحة جافة" : "Office furniture - needs dry space" },
+    { id: "ORD-002", client: t.adminAhmedMohammed, type: t.adminColdStorage, area: `30 ${t.adminSqm}`, duration: `1 ${t.adminMonth}`, totalSar: 3600, status: t.adminApproved, date: "2026-03-18", extras: [t.nrDelivery], notes: lang === "ar" ? "مواد غذائية - تحتاج تبريد مستمر" : "Food items - requires continuous cooling" },
+    { id: "ORD-003", client: t.adminCompanyNokhba, type: t.adminCarStorage, area: "-", duration: `6 ${t.adminMonths}`, totalSar: 3000, status: t.adminCompleted, date: "2026-03-10", extras: [], notes: lang === "ar" ? "سيارة تويوتا كامري 2025" : "Toyota Camry 2025" },
+    { id: "ORD-004", client: t.adminSaraAhmed, type: t.adminHazardous, area: `5 ${t.adminSqm}`, duration: `2 ${t.adminMonths}`, totalSar: 3000, status: t.adminRejected, date: "2026-03-05", extras: [t.nrPacking, t.nrInsurance], notes: lang === "ar" ? "مواد كيميائية - مرفوض لعدم استيفاء الشروط" : "Chemicals - rejected due to unmet requirements" },
   ];
 
   const mockSpaces = spaces;
