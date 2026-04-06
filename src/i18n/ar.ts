@@ -507,6 +507,20 @@ const ar = {
   adminThPhone: "الهاتف",
   adminUserSince: "عضو منذ",
   adminTotalSpent: "إجمالي المدفوعات",
+
+  // Order Details
+  adminOrderDetails: "تفاصيل الطلب",
+  adminOrderInfo: "معلومات الطلب",
+  adminBackToOrders: "العودة للطلبات",
+  adminOrderDate: "تاريخ الطلب",
+  adminOrderClient: "العميل",
+  adminOrderStorageType: "نوع التخزين",
+  adminOrderArea: "المساحة",
+  adminOrderDuration: "المدة",
+  adminOrderTotal: "التكلفة الإجمالية",
+  adminOrderStatus: "الحالة",
+  adminOrderExtras: "خدمات إضافية",
+  adminOrderNotes: "ملاحظات",
 };
 
 export default ar;

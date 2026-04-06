@@ -507,6 +507,20 @@ const en = {
   adminThPhone: "Phone",
   adminUserSince: "Member Since",
   adminTotalSpent: "Total Spent",
+
+  // Order Details
+  adminOrderDetails: "Order Details",
+  adminOrderInfo: "Order Information",
+  adminBackToOrders: "Back to Orders",
+  adminOrderDate: "Order Date",
+  adminOrderClient: "Client",
+  adminOrderStorageType: "Storage Type",
+  adminOrderArea: "Area",
+  adminOrderDuration: "Duration",
+  adminOrderTotal: "Total Cost",
+  adminOrderStatus: "Status",
+  adminOrderExtras: "Additional Services",
+  adminOrderNotes: "Notes",
 };
 
 export default en;

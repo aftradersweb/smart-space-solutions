@@ -44,7 +44,8 @@ const AdminPage = () => {
   const [editingSpace, setEditingSpace] = useState<SpaceItem | null>(null);
   const [spaceFormData, setSpaceFormData] = useState({ name: "", nameAr: "", type: "", capacity: "" });
 
-  // Users state
+  // Orders state
+  const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
 
   const [spaces, setSpaces] = useState<SpaceItem[]>([
