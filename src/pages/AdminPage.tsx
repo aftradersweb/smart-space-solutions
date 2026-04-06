@@ -103,11 +103,30 @@ const AdminPage = () => {
   ];
 
   const mockUsers = [
-    { name: t.adminAhmedMohammed, email: "ahmed@email.com", type: t.adminIndividual, orders: 3, joined: "2026-01-15" },
-    { name: t.adminCompanyAlaman, email: "info@alaman.com", type: t.adminCompany, orders: 12, joined: "2025-11-20" },
-    { name: t.adminSaraAhmed, email: "sara@email.com", type: t.adminIndividual, orders: 1, joined: "2026-03-01" },
-    { name: t.adminCompanyNokhba, email: "info@nokhba.com", type: t.adminCompany, orders: 8, joined: "2025-12-10" },
+    { id: "U-01", name: t.adminAhmedMohammed, email: "ahmed@email.com", phone: "+966 55 123 4567", type: t.adminIndividual, orders: 3, joined: "2026-01-15", totalSpent: 12500 },
+    { id: "U-02", name: t.adminCompanyAlaman, email: "info@alaman.com", phone: "+966 50 987 6543", type: t.adminCompany, orders: 12, joined: "2025-11-20", totalSpent: 85000 },
+    { id: "U-03", name: t.adminSaraAhmed, email: "sara@email.com", phone: "+966 54 456 7890", type: t.adminIndividual, orders: 1, joined: "2026-03-01", totalSpent: 3000 },
+    { id: "U-04", name: t.adminCompanyNokhba, email: "info@nokhba.com", phone: "+966 50 111 2222", type: t.adminCompany, orders: 8, joined: "2025-12-10", totalSpent: 64000 },
   ];
+
+  const mockUserOrders: Record<string, { id: string; type: string; area: string; duration: string; total: number; status: string; date: string }[]> = {
+    "U-01": [
+      { id: "ORD-002", type: t.adminColdStorage, area: `30 ${t.adminSqm}`, duration: `1 ${t.adminMonth}`, total: 3600, status: t.adminApproved, date: "2026-03-18" },
+      { id: "ORD-005", type: t.adminNormalStorage, area: `10 ${t.adminSqm}`, duration: `2 ${t.adminMonths}`, total: 1000, status: t.adminCompleted, date: "2026-02-10" },
+      { id: "ORD-008", type: t.adminCarStorage, area: "-", duration: `3 ${t.adminMonths}`, total: 1500, status: t.adminUnderReview, date: "2026-03-25" },
+    ],
+    "U-02": [
+      { id: "ORD-001", type: t.adminNormalStorage, area: `20 ${t.adminSqm}`, duration: `3 ${t.adminMonths}`, total: 4500, status: t.adminUnderReview, date: "2026-03-20" },
+      { id: "ORD-006", type: t.adminColdStorage, area: `50 ${t.adminSqm}`, duration: `6 ${t.adminMonths}`, total: 36000, status: t.adminApproved, date: "2026-01-15" },
+    ],
+    "U-03": [
+      { id: "ORD-004", type: t.adminHazardous, area: `5 ${t.adminSqm}`, duration: `2 ${t.adminMonths}`, total: 3000, status: t.adminRejected, date: "2026-03-05" },
+    ],
+    "U-04": [
+      { id: "ORD-003", type: t.adminCarStorage, area: "-", duration: `6 ${t.adminMonths}`, total: 3000, status: t.adminCompleted, date: "2026-03-10" },
+      { id: "ORD-007", type: t.adminHighSecurity, area: `15 ${t.adminSqm}`, duration: `4 ${t.adminMonths}`, total: 12000, status: t.adminApproved, date: "2026-02-01" },
+    ],
+  };
 
   const statusColor = (s: string) => {
     const map: Record<string, string> = {
