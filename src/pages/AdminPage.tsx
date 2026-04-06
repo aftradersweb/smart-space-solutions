@@ -44,7 +44,8 @@ const AdminPage = () => {
   const [editingSpace, setEditingSpace] = useState<SpaceItem | null>(null);
   const [spaceFormData, setSpaceFormData] = useState({ name: "", nameAr: "", type: "", capacity: "" });
 
-  // Users state
+  // Orders state
+  const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
 
   const [spaces, setSpaces] = useState<SpaceItem[]>([
@@ -86,10 +87,10 @@ const AdminPage = () => {
   });
 
   const mockAdminOrders = [
-    { id: "ORD-001", client: t.adminCompanyAlaman, type: t.adminNormalStorage, area: `20 ${t.adminSqm}`, duration: `3 ${t.adminMonths}`, totalSar: 4500, status: t.adminUnderReview, date: "2026-03-20" },
-    { id: "ORD-002", client: t.adminAhmedMohammed, type: t.adminColdStorage, area: `30 ${t.adminSqm}`, duration: `1 ${t.adminMonth}`, totalSar: 3600, status: t.adminApproved, date: "2026-03-18" },
-    { id: "ORD-003", client: t.adminCompanyNokhba, type: t.adminCarStorage, area: "-", duration: `6 ${t.adminMonths}`, totalSar: 3000, status: t.adminCompleted, date: "2026-03-10" },
-    { id: "ORD-004", client: t.adminSaraAhmed, type: t.adminHazardous, area: `5 ${t.adminSqm}`, duration: `2 ${t.adminMonth}`, totalSar: 3000, status: t.adminRejected, date: "2026-03-05" },
+    { id: "ORD-001", client: t.adminCompanyAlaman, type: t.adminNormalStorage, area: `20 ${t.adminSqm}`, duration: `3 ${t.adminMonths}`, totalSar: 4500, status: t.adminUnderReview, date: "2026-03-20", extras: [t.nrPickup, t.nrInsurance], notes: lang === "ar" ? "أثاث مكتبي - يحتاج مساحة جافة" : "Office furniture - needs dry space" },
+    { id: "ORD-002", client: t.adminAhmedMohammed, type: t.adminColdStorage, area: `30 ${t.adminSqm}`, duration: `1 ${t.adminMonth}`, totalSar: 3600, status: t.adminApproved, date: "2026-03-18", extras: [t.nrDelivery], notes: lang === "ar" ? "مواد غذائية - تحتاج تبريد مستمر" : "Food items - requires continuous cooling" },
+    { id: "ORD-003", client: t.adminCompanyNokhba, type: t.adminCarStorage, area: "-", duration: `6 ${t.adminMonths}`, totalSar: 3000, status: t.adminCompleted, date: "2026-03-10", extras: [], notes: lang === "ar" ? "سيارة تويوتا كامري 2025" : "Toyota Camry 2025" },
+    { id: "ORD-004", client: t.adminSaraAhmed, type: t.adminHazardous, area: `5 ${t.adminSqm}`, duration: `2 ${t.adminMonths}`, totalSar: 3000, status: t.adminRejected, date: "2026-03-05", extras: [t.nrPacking, t.nrInsurance], notes: lang === "ar" ? "مواد كيميائية - مرفوض لعدم استيفاء الشروط" : "Chemicals - rejected due to unmet requirements" },
   ];
 
   const mockSpaces = spaces;
@@ -298,6 +299,8 @@ const AdminPage = () => {
 
   // ─── Orders ───
   const OrdersContent = () => {
+    const selectedOrderData = selectedOrder ? mockAdminOrders.find(o => o.id === selectedOrder) : null;
+
     const ExportButtons = () => (
       <div className="flex gap-2 flex-wrap">
         <Button variant="outline" size="sm" onClick={handleExportOrdersPDF} className="gap-1.5 text-xs">
@@ -309,6 +312,72 @@ const AdminPage = () => {
       </div>
     );
 
+    // Order Details View
+    if (selectedOrderData) {
+      return (
+        <div className="space-y-6">
+          <Button variant="ghost" size="sm" onClick={() => setSelectedOrder(null)} className="gap-2 text-muted-foreground hover:text-foreground mb-2">
+            <ArrowLeft className="w-4 h-4" /> {t.adminBackToOrders}
+          </Button>
+          <h2 className={`text-xl font-bold text-foreground ${isMobile ? "text-base" : ""}`}>{t.adminOrderDetails}</h2>
+
+          {/* Order Info Card */}
+          <div className="glass rounded-xl p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <ClipboardList className="w-5 h-5 text-primary" /> {t.adminOrderInfo}
+            </h3>
+            <div className={`grid ${isMobile ? "grid-cols-1 gap-3" : "grid-cols-2 lg:grid-cols-3 gap-4"}`}>
+              <div><span className="text-xs text-muted-foreground">{t.adminThOrderId}</span><p className="text-sm font-mono font-medium text-primary mt-1">{selectedOrderData.id}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminOrderClient}</span><p className="text-sm font-medium text-foreground mt-1">{selectedOrderData.client}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminOrderDate}</span><p className="text-sm font-medium text-foreground mt-1">{selectedOrderData.date}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminOrderStorageType}</span><p className="text-sm font-medium text-foreground mt-1">{selectedOrderData.type}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminOrderArea}</span><p className="text-sm font-medium text-foreground mt-1">{selectedOrderData.area}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminOrderDuration}</span><p className="text-sm font-medium text-foreground mt-1">{selectedOrderData.duration}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminOrderTotal}</span><p className="text-sm font-bold text-emerald-400 mt-1">{formatPrice(selectedOrderData.totalSar)}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminOrderStatus}</span><p className="mt-1"><Badge className={`${statusColor(selectedOrderData.status)} border-none text-xs`}>{selectedOrderData.status}</Badge></p></div>
+            </div>
+          </div>
+
+          {/* Additional Services */}
+          {selectedOrderData.extras.length > 0 && (
+            <div className="glass rounded-xl p-6 space-y-4">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <Package className="w-5 h-5 text-primary" /> {t.adminOrderExtras}
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {selectedOrderData.extras.map((extra, i) => (
+                  <Badge key={i} variant="outline" className="text-sm px-3 py-1">{extra}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Notes */}
+          {selectedOrderData.notes && (
+            <div className="glass rounded-xl p-6 space-y-4">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" /> {t.adminOrderNotes}
+              </h3>
+              <p className="text-sm text-muted-foreground">{selectedOrderData.notes}</p>
+            </div>
+          )}
+
+          {/* Actions for pending orders */}
+          {selectedOrderData.status === t.adminUnderReview && (
+            <div className="flex gap-3">
+              <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+                <CheckCircle className="w-4 h-4" /> {t.adminApproved}
+              </Button>
+              <Button variant="destructive" className="gap-2">
+                <XCircle className="w-4 h-4" /> {t.adminRejected}
+              </Button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Orders List View
     if (isMobile) {
       return (
         <div className="space-y-3">
@@ -317,7 +386,7 @@ const AdminPage = () => {
             <ExportButtons />
           </div>
           {mockAdminOrders.map((o) => (
-            <div key={o.id} className="glass rounded-xl p-4 space-y-2">
+            <div key={o.id} className="glass rounded-xl p-4 space-y-2 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setSelectedOrder(o.id)}>
               <div className="flex items-center justify-between">
                 <span className="font-medium text-primary text-sm">{o.id}</span>
                 <Badge className={`${statusColor(o.status)} border-none text-[10px]`}>{o.status}</Badge>
@@ -330,15 +399,6 @@ const AdminPage = () => {
               </div>
               <div className="flex items-center justify-between pt-1 border-t border-border/50">
                 <span className="text-sm font-bold text-foreground">{formatPrice(o.totalSar)}</span>
-                <div className="flex items-center gap-1">
-                  {o.status === t.adminUnderReview && (
-                    <>
-                      <button className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400"><CheckCircle className="w-4 h-4" /></button>
-                      <button className="p-1.5 rounded-lg bg-red-500/20 text-red-400"><XCircle className="w-4 h-4" /></button>
-                    </>
-                  )}
-                  <button className="p-1.5 rounded-lg hover:bg-muted/30 text-muted-foreground"><Eye className="w-4 h-4" /></button>
-                </div>
               </div>
             </div>
           ))}
@@ -355,14 +415,14 @@ const AdminPage = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">
-                {[t.adminThOrderId, t.adminThClient, t.adminThType, t.adminThArea, t.adminThDuration, t.adminThTotal, t.adminThStatus, t.adminThActions].map((h) => (
+                {[t.adminThOrderId, t.adminThClient, t.adminThType, t.adminThArea, t.adminThDuration, t.adminThTotal, t.adminThStatus].map((h) => (
                   <th key={h} className={`${textAlign} p-4 text-sm font-medium text-muted-foreground`}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {mockAdminOrders.map((o) => (
-                <tr key={o.id} className="border-b border-border/50 hover:bg-muted/10">
+                <tr key={o.id} className="border-b border-border/50 hover:bg-muted/10 cursor-pointer transition-colors" onClick={() => setSelectedOrder(o.id)}>
                   <td className="p-4 font-medium text-primary text-sm">{o.id}</td>
                   <td className="p-4 text-foreground text-sm">{o.client}</td>
                   <td className="p-4 text-muted-foreground text-sm">{o.type}</td>
@@ -370,17 +430,6 @@ const AdminPage = () => {
                   <td className="p-4 text-muted-foreground text-sm">{o.duration}</td>
                   <td className="p-4 text-foreground font-bold text-sm">{formatPrice(o.totalSar)}</td>
                   <td className="p-4"><Badge className={`${statusColor(o.status)} border-none text-xs`}>{o.status}</Badge></td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-1">
-                      {o.status === t.adminUnderReview && (
-                        <>
-                          <button className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"><CheckCircle className="w-4 h-4" /></button>
-                          <button className="p-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30"><XCircle className="w-4 h-4" /></button>
-                        </>
-                      )}
-                      <button className="p-1.5 rounded-lg hover:bg-muted/30 text-muted-foreground"><Eye className="w-4 h-4" /></button>
-                    </div>
-                  </td>
                 </tr>
               ))}
             </tbody>
