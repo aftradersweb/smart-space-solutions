@@ -665,12 +665,96 @@ const AdminPage = () => {
 
   // ─── Users ───
   const UsersContent = () => {
+    const selectedUserData = selectedUser ? mockUsers.find(u => u.id === selectedUser) : null;
+    const userOrders = selectedUser ? (mockUserOrders[selectedUser] || []) : [];
+
+    // User Details View
+    if (selectedUserData) {
+      return (
+        <div className="space-y-6">
+          <Button variant="ghost" size="sm" onClick={() => setSelectedUser(null)} className="gap-2 text-muted-foreground hover:text-foreground mb-2">
+            <ArrowLeft className="w-4 h-4" /> {t.adminBackToUsers}
+          </Button>
+          <h2 className={`text-xl font-bold text-foreground ${isMobile ? "text-base" : ""}`}>{t.adminUserDetails}</h2>
+
+          {/* User Info Card */}
+          <div className="glass rounded-xl p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <User className="w-5 h-5 text-primary" /> {t.adminUserInfo}
+            </h3>
+            <div className={`grid ${isMobile ? "grid-cols-1 gap-3" : "grid-cols-2 lg:grid-cols-3 gap-4"}`}>
+              <div><span className="text-xs text-muted-foreground">{t.adminThName}</span><p className="text-sm font-medium text-foreground mt-1">{selectedUserData.name}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminThEmail}</span><p className="text-sm font-medium text-foreground mt-1">{selectedUserData.email}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminThPhone}</span><p className="text-sm font-medium text-foreground mt-1" dir="ltr">{selectedUserData.phone}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminThUserType}</span><p className="mt-1"><Badge className={`${selectedUserData.type === t.adminCompany ? "bg-secondary/20 text-secondary" : "bg-primary/20 text-primary"} border-none text-xs`}>{selectedUserData.type}</Badge></p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminUserSince}</span><p className="text-sm font-medium text-foreground mt-1">{selectedUserData.joined}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminTotalSpent}</span><p className="text-sm font-medium text-emerald-400 mt-1">{formatPrice(selectedUserData.totalSpent)}</p></div>
+            </div>
+          </div>
+
+          {/* User Orders Table */}
+          <div className="glass rounded-xl p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <ClipboardList className="w-5 h-5 text-primary" /> {t.adminUserOrders} ({userOrders.length})
+            </h3>
+            {userOrders.length === 0 ? (
+              <p className="text-muted-foreground text-sm">{lang === "ar" ? "لا توجد طلبات" : "No orders found"}</p>
+            ) : isMobile ? (
+              <div className="space-y-3">
+                {userOrders.map(o => (
+                  <div key={o.id} className="bg-muted/20 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-xs text-primary">{o.id}</span>
+                      <Badge className={`${statusColor(o.status)} border-none text-[10px]`}>{o.status}</Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div><span className="text-muted-foreground">{t.adminThType}</span><p className="text-foreground mt-0.5">{o.type}</p></div>
+                      <div><span className="text-muted-foreground">{t.adminThArea}</span><p className="text-foreground mt-0.5">{o.area}</p></div>
+                      <div><span className="text-muted-foreground">{t.adminThDuration}</span><p className="text-foreground mt-0.5">{o.duration}</p></div>
+                      <div><span className="text-muted-foreground">{t.adminThTotal}</span><p className="text-foreground mt-0.5">{formatPrice(o.total)}</p></div>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">{t.thDate}: {o.date}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-lg">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      {[t.adminThOrderId, t.adminThType, t.adminThArea, t.adminThDuration, t.adminThTotal, t.adminThStatus, t.thDate].map(h => (
+                        <th key={h} className={`${textAlign} p-3 text-xs font-medium text-muted-foreground`}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {userOrders.map(o => (
+                      <tr key={o.id} className="border-b border-border/30 hover:bg-muted/10">
+                        <td className="p-3 font-mono text-xs text-primary">{o.id}</td>
+                        <td className="p-3 text-sm text-foreground">{o.type}</td>
+                        <td className="p-3 text-sm text-muted-foreground">{o.area}</td>
+                        <td className="p-3 text-sm text-muted-foreground">{o.duration}</td>
+                        <td className="p-3 text-sm font-medium text-foreground">{formatPrice(o.total)}</td>
+                        <td className="p-3"><Badge className={`${statusColor(o.status)} border-none text-xs`}>{o.status}</Badge></td>
+                        <td className="p-3 text-sm text-muted-foreground">{o.date}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Users List View
     if (isMobile) {
       return (
         <div className="space-y-3">
           <h2 className="text-base font-bold text-foreground">{t.adminManageUsers}</h2>
           {mockUsers.map((u) => (
-            <div key={u.email} className="glass rounded-xl p-4 space-y-2">
+            <div key={u.email} className="glass rounded-xl p-4 space-y-2 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setSelectedUser(u.id)}>
               <div className="flex items-center justify-between">
                 <span className="font-medium text-foreground text-sm">{u.name}</span>
                 <Badge className={`${u.type === t.adminCompany ? "bg-secondary/20 text-secondary" : "bg-primary/20 text-primary"} border-none text-[10px]`}>{u.type}</Badge>
@@ -692,20 +776,19 @@ const AdminPage = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">
-                {[t.adminThName, t.adminThEmail, t.adminThUserType, t.adminThOrderCount, t.adminThJoinDate, ""].map((h) => (
+                {[t.adminThName, t.adminThEmail, t.adminThUserType, t.adminThOrderCount, t.adminThJoinDate].map((h) => (
                   <th key={h} className={`${textAlign} p-4 text-sm font-medium text-muted-foreground`}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {mockUsers.map((u) => (
-                <tr key={u.email} className="border-b border-border/50 hover:bg-muted/10">
+                <tr key={u.email} className="border-b border-border/50 hover:bg-muted/10 cursor-pointer transition-colors" onClick={() => setSelectedUser(u.id)}>
                   <td className="p-4 font-medium text-foreground text-sm">{u.name}</td>
                   <td className="p-4 text-muted-foreground text-sm">{u.email}</td>
                   <td className="p-4"><Badge className={`${u.type === t.adminCompany ? "bg-secondary/20 text-secondary" : "bg-primary/20 text-primary"} border-none text-xs`}>{u.type}</Badge></td>
                   <td className="p-4 text-muted-foreground text-sm">{u.orders}</td>
                   <td className="p-4 text-muted-foreground text-sm">{u.joined}</td>
-                  <td className="p-4"><MoreVertical className="w-4 h-4 text-muted-foreground" /></td>
                 </tr>
               ))}
             </tbody>
