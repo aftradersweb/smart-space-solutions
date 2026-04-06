@@ -498,6 +498,15 @@ const ar = {
   adminCancel: "إلغاء",
   adminSave: "حفظ",
   adminCapacity: "السعة",
+
+  // User Details
+  adminUserDetails: "تفاصيل المستخدم",
+  adminUserInfo: "معلومات المستخدم",
+  adminBackToUsers: "العودة للمستخدمين",
+  adminUserOrders: "طلبات المستخدم",
+  adminThPhone: "الهاتف",
+  adminUserSince: "عضو منذ",
+  adminTotalSpent: "إجمالي المدفوعات",
 };
 
 export default ar;

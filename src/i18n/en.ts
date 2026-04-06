@@ -498,6 +498,15 @@ const en = {
   adminCancel: "Cancel",
   adminSave: "Save",
   adminCapacity: "Capacity",
+
+  // User Details
+  adminUserDetails: "User Details",
+  adminUserInfo: "User Information",
+  adminBackToUsers: "Back to Users",
+  adminUserOrders: "User Orders",
+  adminThPhone: "Phone",
+  adminUserSince: "Member Since",
+  adminTotalSpent: "Total Spent",
 };
 
 export default en;

@@ -44,6 +44,9 @@ const AdminPage = () => {
   const [editingSpace, setEditingSpace] = useState<SpaceItem | null>(null);
   const [spaceFormData, setSpaceFormData] = useState({ name: "", nameAr: "", type: "", capacity: "" });
 
+  // Users state
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+
   const [spaces, setSpaces] = useState<SpaceItem[]>([
     { id: "S-01", name: "Warehouse A - Section 1", nameAr: "المستودع A - القسم 1", type: t.adminNormal, capacity: `500 ${t.adminSqm}`, used: `380 ${t.adminSqm}`, percent: 76, status: t.adminAvailable, active: true },
     { id: "S-02", name: "Warehouse A - Cold", nameAr: "المستودع A - التبريد", type: t.adminCold, capacity: `200 ${t.adminSqm}`, used: `180 ${t.adminSqm}`, percent: 90, status: t.adminAlmostFull, active: true },
@@ -100,11 +103,30 @@ const AdminPage = () => {
   ];
 
   const mockUsers = [
-    { name: t.adminAhmedMohammed, email: "ahmed@email.com", type: t.adminIndividual, orders: 3, joined: "2026-01-15" },
-    { name: t.adminCompanyAlaman, email: "info@alaman.com", type: t.adminCompany, orders: 12, joined: "2025-11-20" },
-    { name: t.adminSaraAhmed, email: "sara@email.com", type: t.adminIndividual, orders: 1, joined: "2026-03-01" },
-    { name: t.adminCompanyNokhba, email: "info@nokhba.com", type: t.adminCompany, orders: 8, joined: "2025-12-10" },
+    { id: "U-01", name: t.adminAhmedMohammed, email: "ahmed@email.com", phone: "+966 55 123 4567", type: t.adminIndividual, orders: 3, joined: "2026-01-15", totalSpent: 12500 },
+    { id: "U-02", name: t.adminCompanyAlaman, email: "info@alaman.com", phone: "+966 50 987 6543", type: t.adminCompany, orders: 12, joined: "2025-11-20", totalSpent: 85000 },
+    { id: "U-03", name: t.adminSaraAhmed, email: "sara@email.com", phone: "+966 54 456 7890", type: t.adminIndividual, orders: 1, joined: "2026-03-01", totalSpent: 3000 },
+    { id: "U-04", name: t.adminCompanyNokhba, email: "info@nokhba.com", phone: "+966 50 111 2222", type: t.adminCompany, orders: 8, joined: "2025-12-10", totalSpent: 64000 },
   ];
+
+  const mockUserOrders: Record<string, { id: string; type: string; area: string; duration: string; total: number; status: string; date: string }[]> = {
+    "U-01": [
+      { id: "ORD-002", type: t.adminColdStorage, area: `30 ${t.adminSqm}`, duration: `1 ${t.adminMonth}`, total: 3600, status: t.adminApproved, date: "2026-03-18" },
+      { id: "ORD-005", type: t.adminNormalStorage, area: `10 ${t.adminSqm}`, duration: `2 ${t.adminMonths}`, total: 1000, status: t.adminCompleted, date: "2026-02-10" },
+      { id: "ORD-008", type: t.adminCarStorage, area: "-", duration: `3 ${t.adminMonths}`, total: 1500, status: t.adminUnderReview, date: "2026-03-25" },
+    ],
+    "U-02": [
+      { id: "ORD-001", type: t.adminNormalStorage, area: `20 ${t.adminSqm}`, duration: `3 ${t.adminMonths}`, total: 4500, status: t.adminUnderReview, date: "2026-03-20" },
+      { id: "ORD-006", type: t.adminColdStorage, area: `50 ${t.adminSqm}`, duration: `6 ${t.adminMonths}`, total: 36000, status: t.adminApproved, date: "2026-01-15" },
+    ],
+    "U-03": [
+      { id: "ORD-004", type: t.adminHazardous, area: `5 ${t.adminSqm}`, duration: `2 ${t.adminMonths}`, total: 3000, status: t.adminRejected, date: "2026-03-05" },
+    ],
+    "U-04": [
+      { id: "ORD-003", type: t.adminCarStorage, area: "-", duration: `6 ${t.adminMonths}`, total: 3000, status: t.adminCompleted, date: "2026-03-10" },
+      { id: "ORD-007", type: t.adminHighSecurity, area: `15 ${t.adminSqm}`, duration: `4 ${t.adminMonths}`, total: 12000, status: t.adminApproved, date: "2026-02-01" },
+    ],
+  };
 
   const statusColor = (s: string) => {
     const map: Record<string, string> = {
@@ -643,12 +665,96 @@ const AdminPage = () => {
 
   // ─── Users ───
   const UsersContent = () => {
+    const selectedUserData = selectedUser ? mockUsers.find(u => u.id === selectedUser) : null;
+    const userOrders = selectedUser ? (mockUserOrders[selectedUser] || []) : [];
+
+    // User Details View
+    if (selectedUserData) {
+      return (
+        <div className="space-y-6">
+          <Button variant="ghost" size="sm" onClick={() => setSelectedUser(null)} className="gap-2 text-muted-foreground hover:text-foreground mb-2">
+            <ArrowLeft className="w-4 h-4" /> {t.adminBackToUsers}
+          </Button>
+          <h2 className={`text-xl font-bold text-foreground ${isMobile ? "text-base" : ""}`}>{t.adminUserDetails}</h2>
+
+          {/* User Info Card */}
+          <div className="glass rounded-xl p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <User className="w-5 h-5 text-primary" /> {t.adminUserInfo}
+            </h3>
+            <div className={`grid ${isMobile ? "grid-cols-1 gap-3" : "grid-cols-2 lg:grid-cols-3 gap-4"}`}>
+              <div><span className="text-xs text-muted-foreground">{t.adminThName}</span><p className="text-sm font-medium text-foreground mt-1">{selectedUserData.name}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminThEmail}</span><p className="text-sm font-medium text-foreground mt-1">{selectedUserData.email}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminThPhone}</span><p className="text-sm font-medium text-foreground mt-1" dir="ltr">{selectedUserData.phone}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminThUserType}</span><p className="mt-1"><Badge className={`${selectedUserData.type === t.adminCompany ? "bg-secondary/20 text-secondary" : "bg-primary/20 text-primary"} border-none text-xs`}>{selectedUserData.type}</Badge></p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminUserSince}</span><p className="text-sm font-medium text-foreground mt-1">{selectedUserData.joined}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminTotalSpent}</span><p className="text-sm font-medium text-emerald-400 mt-1">{formatPrice(selectedUserData.totalSpent)}</p></div>
+            </div>
+          </div>
+
+          {/* User Orders Table */}
+          <div className="glass rounded-xl p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <ClipboardList className="w-5 h-5 text-primary" /> {t.adminUserOrders} ({userOrders.length})
+            </h3>
+            {userOrders.length === 0 ? (
+              <p className="text-muted-foreground text-sm">{lang === "ar" ? "لا توجد طلبات" : "No orders found"}</p>
+            ) : isMobile ? (
+              <div className="space-y-3">
+                {userOrders.map(o => (
+                  <div key={o.id} className="bg-muted/20 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-xs text-primary">{o.id}</span>
+                      <Badge className={`${statusColor(o.status)} border-none text-[10px]`}>{o.status}</Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div><span className="text-muted-foreground">{t.adminThType}</span><p className="text-foreground mt-0.5">{o.type}</p></div>
+                      <div><span className="text-muted-foreground">{t.adminThArea}</span><p className="text-foreground mt-0.5">{o.area}</p></div>
+                      <div><span className="text-muted-foreground">{t.adminThDuration}</span><p className="text-foreground mt-0.5">{o.duration}</p></div>
+                      <div><span className="text-muted-foreground">{t.adminThTotal}</span><p className="text-foreground mt-0.5">{formatPrice(o.total)}</p></div>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">{t.thDate}: {o.date}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-lg">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      {[t.adminThOrderId, t.adminThType, t.adminThArea, t.adminThDuration, t.adminThTotal, t.adminThStatus, t.thDate].map(h => (
+                        <th key={h} className={`${textAlign} p-3 text-xs font-medium text-muted-foreground`}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {userOrders.map(o => (
+                      <tr key={o.id} className="border-b border-border/30 hover:bg-muted/10">
+                        <td className="p-3 font-mono text-xs text-primary">{o.id}</td>
+                        <td className="p-3 text-sm text-foreground">{o.type}</td>
+                        <td className="p-3 text-sm text-muted-foreground">{o.area}</td>
+                        <td className="p-3 text-sm text-muted-foreground">{o.duration}</td>
+                        <td className="p-3 text-sm font-medium text-foreground">{formatPrice(o.total)}</td>
+                        <td className="p-3"><Badge className={`${statusColor(o.status)} border-none text-xs`}>{o.status}</Badge></td>
+                        <td className="p-3 text-sm text-muted-foreground">{o.date}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Users List View
     if (isMobile) {
       return (
         <div className="space-y-3">
           <h2 className="text-base font-bold text-foreground">{t.adminManageUsers}</h2>
           {mockUsers.map((u) => (
-            <div key={u.email} className="glass rounded-xl p-4 space-y-2">
+            <div key={u.email} className="glass rounded-xl p-4 space-y-2 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setSelectedUser(u.id)}>
               <div className="flex items-center justify-between">
                 <span className="font-medium text-foreground text-sm">{u.name}</span>
                 <Badge className={`${u.type === t.adminCompany ? "bg-secondary/20 text-secondary" : "bg-primary/20 text-primary"} border-none text-[10px]`}>{u.type}</Badge>
@@ -670,20 +776,19 @@ const AdminPage = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">
-                {[t.adminThName, t.adminThEmail, t.adminThUserType, t.adminThOrderCount, t.adminThJoinDate, ""].map((h) => (
+                {[t.adminThName, t.adminThEmail, t.adminThUserType, t.adminThOrderCount, t.adminThJoinDate].map((h) => (
                   <th key={h} className={`${textAlign} p-4 text-sm font-medium text-muted-foreground`}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {mockUsers.map((u) => (
-                <tr key={u.email} className="border-b border-border/50 hover:bg-muted/10">
+                <tr key={u.email} className="border-b border-border/50 hover:bg-muted/10 cursor-pointer transition-colors" onClick={() => setSelectedUser(u.id)}>
                   <td className="p-4 font-medium text-foreground text-sm">{u.name}</td>
                   <td className="p-4 text-muted-foreground text-sm">{u.email}</td>
                   <td className="p-4"><Badge className={`${u.type === t.adminCompany ? "bg-secondary/20 text-secondary" : "bg-primary/20 text-primary"} border-none text-xs`}>{u.type}</Badge></td>
                   <td className="p-4 text-muted-foreground text-sm">{u.orders}</td>
                   <td className="p-4 text-muted-foreground text-sm">{u.joined}</td>
-                  <td className="p-4"><MoreVertical className="w-4 h-4 text-muted-foreground" /></td>
                 </tr>
               ))}
             </tbody>
