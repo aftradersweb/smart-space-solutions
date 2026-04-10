@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Warehouse, User, Building2, Eye, EyeOff, ArrowLeft, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { supabase } from "@/lib/supabase";
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -61,13 +62,77 @@ const AuthPage = () => {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) {
       toast({ title: t.errFixErrors, variant: "destructive" });
       return;
     }
-    navigate("/dashboard");
+
+    setLoading(true);
+    try {
+      if (isLogin) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: form.email,
+          password: form.password,
+        });
+        if (error) throw error;
+        toast({ title: t.loginSuccess || "Logged in successfully" });
+        navigate("/dashboard");
+      } else {
+        const { data, error } = await supabase.auth.signUp({
+          email: form.email,
+          password: form.password,
+          options: {
+            data: {
+              full_name: form.name,
+              user_type: accountType,
+            }
+          }
+        });
+        if (error) throw error;
+
+        if (data.user) {
+          // Create profile
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              full_name: form.name,
+              phone: form.phone,
+              user_type: accountType,
+              company_name: accountType === 'company' ? form.name : null,
+              commercial_reg: accountType === 'company' ? form.commercialReg : null,
+              nationality: form.nationality,
+              gender: form.gender,
+              metadata: {
+                id_number: form.idNumber,
+                owner_name: form.ownerName,
+              }
+            });
+          
+          if (profileError) {
+            console.error("Profile creation error:", profileError);
+          }
+        }
+
+        toast({ 
+          title: t.signupSuccess || "Account created successfully",
+          description: t.verifyEmailMsg || "Please check your email to verify your account" 
+        });
+        setIsLogin(true);
+      }
+    } catch (error: any) {
+      toast({ 
+        title: "Error", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fieldClass = "bg-muted/30 border-border h-12";
@@ -241,8 +306,12 @@ const AuthPage = () => {
               )}
             </div>
 
-            <Button type="submit" size="lg" className="w-full bg-gradient-gold text-primary-foreground font-bold glow-gold hover:opacity-90 transition-opacity h-12">
-              {isLogin ? t.submitLogin : t.submitSignup}
+            <Button type="submit" size="lg" disabled={loading} className="w-full bg-gradient-gold text-primary-foreground font-bold glow-gold hover:opacity-90 transition-opacity h-12">
+              {loading ? (
+                <div className="w-6 h-6 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+              ) : (
+                isLogin ? t.submitLogin : t.submitSignup
+              )}
             </Button>
           </form>
 

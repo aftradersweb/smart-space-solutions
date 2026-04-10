@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
 import {
   Warehouse, LayoutDashboard, ClipboardList, MapPin as Space, DollarSign,
   Users, Search, Bell, User, LogOut, ChevronLeft, Eye,
@@ -20,6 +21,45 @@ import { useToast } from "@/hooks/use-toast";
 import MobileTopBar from "@/components/MobileTopBar";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
+interface AdminOrder {
+  id: string;
+  created_at: string;
+  status: string;
+  area: number;
+  duration_months: number;
+  total_price: number;
+  notes: string;
+  profiles: {
+    full_name: string;
+    company_name: string;
+    user_type: string;
+  };
+  storage_types: {
+    name_en: string;
+    name_ar: string;
+  };
+}
+
+interface AdminProfile {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  user_type: string;
+  created_at: string;
+}
+
+interface AdminSpace {
+  id: string;
+  name_en: string;
+  name_ar: string;
+  storage_type_id: string;
+  capacity: number;
+  used_capacity: number;
+  status: string;
+  is_active: boolean;
+}
+
 type Tab = "overview" | "orders" | "spaces" | "pricing" | "users" | "settings";
 
 type SpaceItem = {
@@ -33,50 +73,25 @@ type SpaceStoredItem = {
 const AdminPage = () => {
   const [tab, setTab] = useState<Tab>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { t, lang, setLang, dir } = useLanguage();
-  const isMobile = useIsMobile();
-  const { currency, setCurrency, currencySymbol, formatPrice } = useCurrency();
-  const { toast } = useToast();
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [profiles, setProfiles] = useState<AdminProfile[]>([]);
+  const [spaces, setSpaces] = useState<AdminSpace[]>([]);
+  const [types, setTypes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Spaces state
-  const [selectedSpace, setSelectedSpace] = useState<string | null>(null);
-  const [showSpaceForm, setShowSpaceForm] = useState(false);
-  const [editingSpace, setEditingSpace] = useState<SpaceItem | null>(null);
-  const [spaceFormData, setSpaceFormData] = useState({ name: "", nameAr: "", type: "", capacity: "" });
-
-  // Orders state
+  // Selection states
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
+  const [selectedSpace, setSelectedSpace] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
-  const [confirmAction, setConfirmAction] = useState<{ type: "approve" | "reject"; orderId: string } | null>(null);
-  const [orderStatusOverrides, setOrderStatusOverrides] = useState<Record<string, string>>({});
 
-  const [spaces, setSpaces] = useState<SpaceItem[]>([
-    { id: "S-01", name: "Warehouse A - Section 1", nameAr: "المستودع A - القسم 1", type: t.adminNormal, capacity: `500 ${t.adminSqm}`, used: `380 ${t.adminSqm}`, percent: 76, status: t.adminAvailable, active: true },
-    { id: "S-02", name: "Warehouse A - Cold", nameAr: "المستودع A - التبريد", type: t.adminCold, capacity: `200 ${t.adminSqm}`, used: `180 ${t.adminSqm}`, percent: 90, status: t.adminAlmostFull, active: true },
-    { id: "S-03", name: "Warehouse B - Security", nameAr: "المستودع B - الأمان", type: t.adminHighSecurityType, capacity: `100 ${t.adminSqm}`, used: `45 ${t.adminSqm}`, percent: 45, status: t.adminAvailable, active: true },
-    { id: "S-04", name: "Parking Lot", nameAr: "موقف السيارات", type: t.adminCars, capacity: `50 ${t.adminCar}`, used: `32 ${t.adminCar}`, percent: 64, status: t.adminAvailable, active: false },
-  ]);
+  // Form states
+  const [showSpaceForm, setShowSpaceForm] = useState(false);
+  const [editingSpace, setEditingSpace] = useState<any | null>(null);
+  const [spaceFormData, setSpaceFormData] = useState({
+    name: "", nameAr: "", type: "", capacity: ""
+  });
 
-  const mockStoredItems: Record<string, SpaceStoredItem[]> = {
-    "S-01": [
-      { id: "ITM-001", item: lang === "ar" ? "أثاث مكتبي" : "Office Furniture", owner: t.adminCompanyAlaman, remainingDays: 45, startDate: "2026-01-15", endDate: "2026-04-15" },
-      { id: "ITM-002", item: lang === "ar" ? "معدات إلكترونية" : "Electronics Equipment", owner: t.adminAhmedMohammed, remainingDays: 20, startDate: "2026-02-01", endDate: "2026-05-01" },
-      { id: "ITM-003", item: lang === "ar" ? "بضائع تجارية" : "Commercial Goods", owner: t.adminCompanyNokhba, remainingDays: 90, startDate: "2026-03-01", endDate: "2026-09-01" },
-    ],
-    "S-02": [
-      { id: "ITM-004", item: lang === "ar" ? "مواد غذائية" : "Food Products", owner: t.adminCompanyAlaman, remainingDays: 10, startDate: "2026-03-15", endDate: "2026-04-15" },
-      { id: "ITM-005", item: lang === "ar" ? "أدوية" : "Medicines", owner: t.adminSaraAhmed, remainingDays: 60, startDate: "2026-02-20", endDate: "2026-06-20" },
-    ],
-    "S-03": [
-      { id: "ITM-006", item: lang === "ar" ? "مستندات سرية" : "Confidential Documents", owner: t.adminCompanyNokhba, remainingDays: 120, startDate: "2026-01-01", endDate: "2026-08-01" },
-    ],
-    "S-04": [
-      { id: "ITM-007", item: lang === "ar" ? "سيارة تويوتا كامري" : "Toyota Camry", owner: t.adminAhmedMohammed, remainingDays: 30, startDate: "2026-03-01", endDate: "2026-06-01" },
-      { id: "ITM-008", item: lang === "ar" ? "سيارة هونداي سوناتا" : "Hyundai Sonata", owner: t.adminSaraAhmed, remainingDays: 55, startDate: "2026-02-10", endDate: "2026-06-10" },
-    ],
-  };
-
-  // Settings state
+  const [confirmAction, setConfirmAction] = useState<{orderId: string, type: 'approve' | 'reject'} | null>(null);
   const [companyInfo, setCompanyInfo] = useState({
     name: "Smart Storage Hub",
     email: "info@smartstoragehub.com",
@@ -88,65 +103,76 @@ const AdminPage = () => {
     twitter: "", instagram: "", facebook: "", linkedin: "", whatsapp: "", snapchat: "", tiktok: "",
   });
 
-  const mockAdminOrders = [
-    { id: "ORD-001", client: t.adminCompanyAlaman, type: t.adminNormalStorage, area: `20 ${t.adminSqm}`, duration: `3 ${t.adminMonths}`, totalSar: 4500, status: t.adminUnderReview, date: "2026-03-20", extras: [t.nrPickup, t.nrInsurance], notes: lang === "ar" ? "أثاث مكتبي - يحتاج مساحة جافة" : "Office furniture - needs dry space" },
-    { id: "ORD-002", client: t.adminAhmedMohammed, type: t.adminColdStorage, area: `30 ${t.adminSqm}`, duration: `1 ${t.adminMonth}`, totalSar: 3600, status: t.adminApproved, date: "2026-03-18", extras: [t.nrDelivery], notes: lang === "ar" ? "مواد غذائية - تحتاج تبريد مستمر" : "Food items - requires continuous cooling" },
-    { id: "ORD-003", client: t.adminCompanyNokhba, type: t.adminCarStorage, area: "-", duration: `6 ${t.adminMonths}`, totalSar: 3000, status: t.adminCompleted, date: "2026-03-10", extras: [], notes: lang === "ar" ? "سيارة تويوتا كامري 2025" : "Toyota Camry 2025" },
-    { id: "ORD-004", client: t.adminSaraAhmed, type: t.adminHazardous, area: `5 ${t.adminSqm}`, duration: `2 ${t.adminMonths}`, totalSar: 3000, status: t.adminRejected, date: "2026-03-05", extras: [t.nrPacking, t.nrInsurance], notes: lang === "ar" ? "مواد كيميائية - مرفوض لعدم استيفاء الشروط" : "Chemicals - rejected due to unmet requirements" },
-  ].map(o => ({ ...o, status: orderStatusOverrides[o.id] || o.status }));
+  const { t, lang, setLang, dir } = useLanguage();
+  const isMobile = useIsMobile();
+  const { currency, setCurrency, currencySymbol, formatPrice } = useCurrency();
+  const { toast } = useToast();
 
-  const handleOrderStatusChange = (orderId: string, newStatus: "approve" | "reject") => {
-    const statusValue = newStatus === "approve" ? t.adminApproved : t.adminRejected;
-    setOrderStatusOverrides(prev => ({ ...prev, [orderId]: statusValue }));
-    setConfirmAction(null);
-    toast({ title: newStatus === "approve" ? t.adminOrderApprovedSuccess : t.adminOrderRejectedSuccess });
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    
+    // Fetch Orders
+    const { data: oData } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        profiles (full_name, company_name, user_type),
+        storage_types (name_en, name_ar)
+      `)
+      .order('created_at', { ascending: false });
+    
+    // Fetch Profiles
+    const { data: pData } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    // Fetch Spaces
+    const { data: sData } = await supabase
+      .from('storage_spaces')
+      .select('*');
+
+    // Fetch Types (Pricing)
+    const { data: tData } = await supabase
+      .from('storage_types')
+      .select('*');
+
+    if (oData) setOrders(oData as any);
+    if (pData) setProfiles(pData as any);
+    if (sData) setSpaces(sData as any);
+    if (tData) setTypes(tData as any);
+    
+    setLoading(false);
   };
 
-  const mockSpaces = spaces;
+  const handleOrderStatusChange = async (orderId: string, newStatus: string) => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: newStatus })
+      .eq('id', orderId);
 
-  const mockPricing = [
-    { type: t.adminNormalStorage, pricePerM2: 50, minArea: 5, minDuration: 1 },
-    { type: t.adminColdStorage, pricePerM2: 120, minArea: 5, minDuration: 1 },
-    { type: t.adminHighSecurity, pricePerM2: 200, minArea: 2, minDuration: 1 },
-    { type: t.adminHazardous, pricePerM2: 300, minArea: 2, minDuration: 3 },
-    { type: t.adminCarStorageType, pricePerM2: 500, minArea: 1, minDuration: 1 },
-  ];
-
-  const mockUsers = [
-    { id: "U-01", name: t.adminAhmedMohammed, email: "ahmed@email.com", phone: "+966 55 123 4567", type: t.adminIndividual, orders: 3, joined: "2026-01-15", totalSpent: 12500 },
-    { id: "U-02", name: t.adminCompanyAlaman, email: "info@alaman.com", phone: "+966 50 987 6543", type: t.adminCompany, orders: 12, joined: "2025-11-20", totalSpent: 85000 },
-    { id: "U-03", name: t.adminSaraAhmed, email: "sara@email.com", phone: "+966 54 456 7890", type: t.adminIndividual, orders: 1, joined: "2026-03-01", totalSpent: 3000 },
-    { id: "U-04", name: t.adminCompanyNokhba, email: "info@nokhba.com", phone: "+966 50 111 2222", type: t.adminCompany, orders: 8, joined: "2025-12-10", totalSpent: 64000 },
-  ];
-
-  const mockUserOrders: Record<string, { id: string; type: string; area: string; duration: string; total: number; status: string; date: string }[]> = {
-    "U-01": [
-      { id: "ORD-002", type: t.adminColdStorage, area: `30 ${t.adminSqm}`, duration: `1 ${t.adminMonth}`, total: 3600, status: t.adminApproved, date: "2026-03-18" },
-      { id: "ORD-005", type: t.adminNormalStorage, area: `10 ${t.adminSqm}`, duration: `2 ${t.adminMonths}`, total: 1000, status: t.adminCompleted, date: "2026-02-10" },
-      { id: "ORD-008", type: t.adminCarStorage, area: "-", duration: `3 ${t.adminMonths}`, total: 1500, status: t.adminUnderReview, date: "2026-03-25" },
-    ],
-    "U-02": [
-      { id: "ORD-001", type: t.adminNormalStorage, area: `20 ${t.adminSqm}`, duration: `3 ${t.adminMonths}`, total: 4500, status: t.adminUnderReview, date: "2026-03-20" },
-      { id: "ORD-006", type: t.adminColdStorage, area: `50 ${t.adminSqm}`, duration: `6 ${t.adminMonths}`, total: 36000, status: t.adminApproved, date: "2026-01-15" },
-    ],
-    "U-03": [
-      { id: "ORD-004", type: t.adminHazardous, area: `5 ${t.adminSqm}`, duration: `2 ${t.adminMonths}`, total: 3000, status: t.adminRejected, date: "2026-03-05" },
-    ],
-    "U-04": [
-      { id: "ORD-003", type: t.adminCarStorage, area: "-", duration: `6 ${t.adminMonths}`, total: 3000, status: t.adminCompleted, date: "2026-03-10" },
-      { id: "ORD-007", type: t.adminHighSecurity, area: `15 ${t.adminSqm}`, duration: `4 ${t.adminMonths}`, total: 12000, status: t.adminApproved, date: "2026-02-01" },
-    ],
+    if (!error) {
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      setConfirmAction(null);
+      toast({ title: t.settingsSaved });
+    }
   };
 
+  // Helper for status colors using database values
   const statusColor = (s: string) => {
     const map: Record<string, string> = {
-      [t.adminUnderReview]: "bg-amber-500/20 text-amber-400",
-      [t.adminApproved]: "bg-emerald-500/20 text-emerald-400",
-      [t.adminCompleted]: "bg-secondary/20 text-secondary",
-      [t.adminRejected]: "bg-red-500/20 text-red-400",
-      [t.adminAvailable]: "bg-emerald-500/20 text-emerald-400",
-      [t.adminAlmostFull]: "bg-amber-500/20 text-amber-400",
-      [t.adminFull]: "bg-red-500/20 text-red-400",
+      'under_review': "bg-amber-500/20 text-amber-400",
+      'approved': "bg-emerald-500/20 text-emerald-400",
+      'active': "bg-emerald-500/20 text-emerald-400",
+      'completed': "bg-secondary/20 text-secondary",
+      'rejected': "bg-red-500/20 text-red-400",
+      'available': "bg-emerald-500/20 text-emerald-400",
+      'almost_full': "bg-amber-500/20 text-amber-400",
+      'full': "bg-red-500/20 text-red-400",
     };
     return map[s] || "bg-muted text-muted-foreground";
   };
@@ -162,11 +188,12 @@ const AdminPage = () => {
 
   const textAlign = dir === "rtl" ? "text-right" : "text-left";
 
+  // Dashboard stats derived from live data
   const stats = [
-    { label: t.adminTotalOrders, value: "156", icon: ClipboardList, color: "text-blue-400", change: "+12%" },
-    { label: t.adminPendingOrders, value: "8", icon: Clock, color: "text-amber-400", change: "-3" },
-    { label: t.adminTotalRevenue, value: formatPrice(245000), icon: TrendingUp, color: "text-emerald-400", change: "+18%" },
-    { label: t.adminActiveClients, value: "89", icon: Users, color: "text-purple-400", change: "+5" },
+    { label: t.adminTotalOrders, value: orders.length.toString(), icon: ClipboardList, color: "text-blue-400", change: "+0%" },
+    { label: t.adminPendingOrders, value: orders.filter(o => o.status === 'under_review').length.toString(), icon: Clock, color: "text-amber-400", change: "-0" },
+    { label: t.adminTotalRevenue, value: formatPrice(orders.reduce((sum, o) => sum + o.total_price, 0)), icon: TrendingUp, color: "text-emerald-400", change: "+0%" },
+    { label: t.adminActiveClients, value: profiles.length.toString(), icon: Users, color: "text-purple-400", change: "+0" },
   ];
 
   // ─── Export helpers ───
@@ -204,34 +231,47 @@ const AdminPage = () => {
   };
 
   const handleExportOrdersCSV = () => {
-    exportToCSV(mockAdminOrders.map(o => ({
-      [t.adminThOrderId]: o.id, [t.adminThClient]: o.client, [t.adminThType]: o.type,
-      [t.adminThArea]: o.area, [t.adminThDuration]: o.duration,
-      [t.adminThTotal]: formatPrice(o.totalSar), [t.adminThStatus]: o.status, [t.thDate]: o.date,
+    exportToCSV(orders.map(o => ({
+      [t.adminThOrderId]: o.id.split('-')[0].toUpperCase(),
+      [t.adminThClient]: o.profiles.company_name || o.profiles.full_name,
+      [t.adminThType]: lang === 'ar' ? o.storage_types.name_ar : o.storage_types.name_en,
+      [t.adminThArea]: `${o.area} ${t.sqm}`,
+      [t.adminThDuration]: `${o.duration_months} ${t.nrMonth}`,
+      [t.adminThTotal]: formatPrice(o.total_price),
+      [t.adminThStatus]: o.status,
+      [t.thDate]: new Date(o.created_at).toLocaleDateString(),
     })), "orders");
   };
 
   const handleExportOrdersPDF = () => {
     exportToPDF(t.adminManageOrders,
       [t.adminThOrderId, t.adminThClient, t.adminThType, t.adminThArea, t.adminThDuration, t.adminThTotal, t.adminThStatus],
-      mockAdminOrders.map(o => [o.id, o.client, o.type, o.area, o.duration, formatPrice(o.totalSar), o.status])
+      orders.map(o => [
+        o.id.split('-')[0].toUpperCase(),
+        o.profiles.company_name || o.profiles.full_name,
+        lang === 'ar' ? o.storage_types.name_ar : o.storage_types.name_en,
+        `${o.area} ${t.sqm}`,
+        `${o.duration_months} ${t.nrMonth}`,
+        formatPrice(o.total_price),
+        o.status
+      ])
     );
   };
 
   const handleExportInvoicesCSV = () => {
-    exportToCSV(mockAdminOrders.map(o => ({
-      [t.thInvoiceId]: `INV-${o.id.split("-")[1]}`,
-      [t.adminThClient]: o.client,
-      [t.thAmount]: formatPrice(o.totalSar),
+    exportToCSV(orders.map(o => ({
+      [t.thInvoiceId]: `INV-${o.id.split("-")[0].toUpperCase()}`,
+      [t.adminThClient]: o.profiles.company_name || o.profiles.full_name,
+      [t.thAmount]: formatPrice(o.total_price),
       [t.adminThStatus]: o.status,
-      [t.thDate]: o.date,
+      [t.thDate]: new Date(o.created_at).toLocaleDateString(),
     })), "invoices");
   };
 
   const handleExportInvoicesPDF = () => {
     exportToPDF(t.invoicesAndPayments || "Invoices",
       [t.thInvoiceId, t.adminThClient, t.thAmount, t.adminThStatus, t.thDate],
-      mockAdminOrders.map(o => [`INV-${o.id.split("-")[1]}`, o.client, formatPrice(o.totalSar), o.status, o.date])
+      orders.map(o => [`INV-${o.id.split("-")[0].toUpperCase()}`, o.profiles.company_name || o.profiles.full_name, formatPrice(o.total_price), o.status, new Date(o.created_at).toLocaleDateString()])
     );
   };
 
@@ -269,16 +309,16 @@ const AdminPage = () => {
         <div className="glass rounded-xl p-4 md:p-6">
           <h3 className="font-bold text-foreground text-sm md:text-base mb-3 md:mb-4">{t.adminLatestOrders}</h3>
           <div className="space-y-2 md:space-y-3">
-            {mockAdminOrders.slice(0, 3).map((o) => (
-              <div key={o.id} className="flex items-center justify-between p-2.5 md:p-3 rounded-lg bg-muted/20">
+            {orders.slice(0, 3).map((o) => (
+              <div key={o.id} className="flex items-center justify-between p-2.5 md:p-3 rounded-lg bg-muted/20 cursor-pointer" onClick={() => { setSelectedOrder(o.id); setTab("orders"); }}>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-foreground text-xs md:text-sm">{o.id}</span>
-                    <span className="text-[10px] md:text-xs text-muted-foreground">- {o.client}</span>
+                    <span className="font-medium text-foreground text-xs md:text-sm">{o.id.split('-')[0].toUpperCase()}</span>
+                    <span className="text-[10px] md:text-xs text-muted-foreground">- {o.profiles.company_name || o.profiles.full_name}</span>
                   </div>
-                  <span className="text-[10px] md:text-xs text-muted-foreground">{o.type} | {formatPrice(o.totalSar)}</span>
+                  <span className="text-[10px] md:text-xs text-muted-foreground">{lang === 'ar' ? o.storage_types.name_ar : o.storage_types.name_en} | {formatPrice(o.total_price)}</span>
                 </div>
-                <Badge className={`${statusColor(o.status)} border-none text-[10px] md:text-xs`}>{o.status}</Badge>
+                <Badge className={`${statusColor(o.status)} border-none text-[10px] md:text-xs`}>{o.status.replace('_', ' ')}</Badge>
               </div>
             ))}
           </div>
@@ -286,16 +326,16 @@ const AdminPage = () => {
         <div className="glass rounded-xl p-4 md:p-6">
           <h3 className="font-bold text-foreground text-sm md:text-base mb-3 md:mb-4">{t.adminSpaceStatus}</h3>
           <div className="space-y-3 md:space-y-4">
-            {mockSpaces.map((s) => (
+            {spaces.slice(0, 4).map((s) => (
               <div key={s.id}>
                 <div className="flex justify-between text-xs md:text-sm mb-1">
-                  <span className="text-foreground font-medium">{lang === "ar" ? s.nameAr || s.name : s.name}</span>
-                  <span className="text-muted-foreground">{s.percent}%</span>
+                  <span className="text-foreground font-medium">{lang === "ar" ? s.name_ar : s.name_en}</span>
+                  <span className="text-muted-foreground">{Math.round((s.used_capacity / s.capacity) * 100)}%</span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full ${s.percent > 85 ? "bg-red-500" : s.percent > 60 ? "bg-amber-500" : "bg-emerald-500"}`}
-                    style={{ width: `${s.percent}%` }}
+                    className={`h-full rounded-full ${(s.used_capacity / s.capacity) > 0.85 ? "bg-red-500" : (s.used_capacity / s.capacity) > 0.6 ? "bg-amber-500" : "bg-emerald-500"}`}
+                    style={{ width: `${(s.used_capacity / s.capacity) * 100}%` }}
                   />
                 </div>
               </div>
@@ -308,7 +348,7 @@ const AdminPage = () => {
 
   // ─── Orders ───
   const OrdersContent = () => {
-    const selectedOrderData = selectedOrder ? mockAdminOrders.find(o => o.id === selectedOrder) : null;
+    const selectedOrderData = selectedOrder ? orders.find(o => o.id === selectedOrder) : null;
 
     const ExportButtons = () => (
       <div className="flex gap-2 flex-wrap">
@@ -336,25 +376,25 @@ const AdminPage = () => {
               <ClipboardList className="w-5 h-5 text-primary" /> {t.adminOrderInfo}
             </h3>
             <div className={`grid ${isMobile ? "grid-cols-1 gap-3" : "grid-cols-2 lg:grid-cols-3 gap-4"}`}>
-              <div><span className="text-xs text-muted-foreground">{t.adminThOrderId}</span><p className="text-sm font-mono font-medium text-primary mt-1">{selectedOrderData.id}</p></div>
-              <div><span className="text-xs text-muted-foreground">{t.adminOrderClient}</span><p className="text-sm font-medium text-foreground mt-1">{selectedOrderData.client}</p></div>
-              <div><span className="text-xs text-muted-foreground">{t.adminOrderDate}</span><p className="text-sm font-medium text-foreground mt-1">{selectedOrderData.date}</p></div>
-              <div><span className="text-xs text-muted-foreground">{t.adminOrderStorageType}</span><p className="text-sm font-medium text-foreground mt-1">{selectedOrderData.type}</p></div>
-              <div><span className="text-xs text-muted-foreground">{t.adminOrderArea}</span><p className="text-sm font-medium text-foreground mt-1">{selectedOrderData.area}</p></div>
-              <div><span className="text-xs text-muted-foreground">{t.adminOrderDuration}</span><p className="text-sm font-medium text-foreground mt-1">{selectedOrderData.duration}</p></div>
-              <div><span className="text-xs text-muted-foreground">{t.adminOrderTotal}</span><p className="text-sm font-bold text-emerald-400 mt-1">{formatPrice(selectedOrderData.totalSar)}</p></div>
-              <div><span className="text-xs text-muted-foreground">{t.adminOrderStatus}</span><p className="mt-1"><Badge className={`${statusColor(selectedOrderData.status)} border-none text-xs`}>{selectedOrderData.status}</Badge></p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminThOrderId}</span><p className="text-sm font-mono font-medium text-primary mt-1">{selectedOrderData.id.split('-')[0].toUpperCase()}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminOrderClient}</span><p className="text-sm font-medium text-foreground mt-1">{selectedOrderData.profiles.company_name || selectedOrderData.profiles.full_name}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminOrderDate}</span><p className="text-sm font-medium text-foreground mt-1">{new Date(selectedOrderData.created_at).toLocaleDateString()}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminOrderStorageType}</span><p className="text-sm font-medium text-foreground mt-1">{lang === 'ar' ? selectedOrderData.storage_types.name_ar : selectedOrderData.storage_types.name_en}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminOrderArea}</span><p className="text-sm font-medium text-foreground mt-1">{selectedOrderData.area} {t.sqm}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminOrderDuration}</span><p className="text-sm font-medium text-foreground mt-1">{selectedOrderData.duration_months} {t.nrMonth}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminOrderTotal}</span><p className="text-sm font-bold text-emerald-400 mt-1">{formatPrice(selectedOrderData.total_price)}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminOrderStatus}</span><p className="mt-1"><Badge className={`${statusColor(selectedOrderData.status)} border-none text-xs`}>{selectedOrderData.status.replace('_', ' ')}</Badge></p></div>
             </div>
           </div>
 
           {/* Additional Services */}
-          {selectedOrderData.extras.length > 0 && (
+          {selectedOrderData.extras && selectedOrderData.extras.length > 0 && (
             <div className="glass rounded-xl p-6 space-y-4">
               <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 <Package className="w-5 h-5 text-primary" /> {t.adminOrderExtras}
               </h3>
               <div className="flex flex-wrap gap-2">
-                {selectedOrderData.extras.map((extra, i) => (
+                {selectedOrderData.extras.map((extra: string, i: number) => (
                   <Badge key={i} variant="outline" className="text-sm px-3 py-1">{extra}</Badge>
                 ))}
               </div>
@@ -372,12 +412,12 @@ const AdminPage = () => {
           )}
 
           {/* Actions for pending orders */}
-          {selectedOrderData.status === t.adminUnderReview && (
+          {selectedOrderData.status === 'under_review' && (
             <div className="flex gap-3">
-              <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setConfirmAction({ type: "approve", orderId: selectedOrderData.id })}>
+              <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => handleOrderStatusChange(selectedOrderData.id, 'approved')}>
                 <CheckCircle className="w-4 h-4" /> {t.adminApproved}
               </Button>
-              <Button variant="destructive" className="gap-2" onClick={() => setConfirmAction({ type: "reject", orderId: selectedOrderData.id })}>
+              <Button variant="destructive" className="gap-2" onClick={() => handleOrderStatusChange(selectedOrderData.id, 'rejected')}>
                 <XCircle className="w-4 h-4" /> {t.adminRejected}
               </Button>
             </div>
@@ -394,20 +434,20 @@ const AdminPage = () => {
             <h2 className="text-base font-bold text-foreground">{t.adminManageOrders}</h2>
             <ExportButtons />
           </div>
-          {mockAdminOrders.map((o) => (
+          {orders.map((o) => (
             <div key={o.id} className="glass rounded-xl p-4 space-y-2 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setSelectedOrder(o.id)}>
               <div className="flex items-center justify-between">
-                <span className="font-medium text-primary text-sm">{o.id}</span>
-                <Badge className={`${statusColor(o.status)} border-none text-[10px]`}>{o.status}</Badge>
+                <span className="font-medium text-primary text-sm">{o.id.split('-')[0].toUpperCase()}</span>
+                <Badge className={`${statusColor(o.status)} border-none text-[10px]`}>{o.status.replace('_', ' ')}</Badge>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div><span className="text-muted-foreground">{t.adminThClient}</span><p className="text-foreground mt-0.5">{o.client}</p></div>
-                <div><span className="text-muted-foreground">{t.adminThType}</span><p className="text-foreground mt-0.5">{o.type}</p></div>
-                <div><span className="text-muted-foreground">{t.adminThArea}</span><p className="text-foreground mt-0.5">{o.area}</p></div>
-                <div><span className="text-muted-foreground">{t.adminThDuration}</span><p className="text-foreground mt-0.5">{o.duration}</p></div>
+                <div><span className="text-muted-foreground">{t.adminThClient}</span><p className="text-foreground mt-0.5">{o.profiles.company_name || o.profiles.full_name}</p></div>
+                <div><span className="text-muted-foreground">{t.adminThType}</span><p className="text-foreground mt-0.5">{lang === 'ar' ? o.storage_types.name_ar : o.storage_types.name_en}</p></div>
+                <div><span className="text-muted-foreground">{t.adminThArea}</span><p className="text-foreground mt-0.5">{o.area} {t.sqm}</p></div>
+                <div><span className="text-muted-foreground">{t.adminThDuration}</span><p className="text-foreground mt-0.5">{o.duration_months} {t.nrMonth}</p></div>
               </div>
               <div className="flex items-center justify-between pt-1 border-t border-border/50">
-                <span className="text-sm font-bold text-foreground">{formatPrice(o.totalSar)}</span>
+                <span className="text-sm font-bold text-foreground">{formatPrice(o.total_price)}</span>
               </div>
             </div>
           ))}
@@ -430,15 +470,15 @@ const AdminPage = () => {
               </tr>
             </thead>
             <tbody>
-              {mockAdminOrders.map((o) => (
+              {orders.map((o) => (
                 <tr key={o.id} className="border-b border-border/50 hover:bg-muted/10 cursor-pointer transition-colors" onClick={() => setSelectedOrder(o.id)}>
-                  <td className="p-4 font-medium text-primary text-sm">{o.id}</td>
-                  <td className="p-4 text-foreground text-sm">{o.client}</td>
-                  <td className="p-4 text-muted-foreground text-sm">{o.type}</td>
-                  <td className="p-4 text-muted-foreground text-sm">{o.area}</td>
-                  <td className="p-4 text-muted-foreground text-sm">{o.duration}</td>
-                  <td className="p-4 text-foreground font-bold text-sm">{formatPrice(o.totalSar)}</td>
-                  <td className="p-4"><Badge className={`${statusColor(o.status)} border-none text-xs`}>{o.status}</Badge></td>
+                  <td className="p-4 font-medium text-primary text-sm">{o.id.split('-')[0].toUpperCase()}</td>
+                  <td className="p-4 text-foreground text-sm">{o.profiles.company_name || o.profiles.full_name}</td>
+                  <td className="p-4 text-muted-foreground text-sm">{lang === 'ar' ? o.storage_types.name_ar : o.storage_types.name_en}</td>
+                  <td className="p-4 text-muted-foreground text-sm">{o.area} {t.sqm}</td>
+                  <td className="p-4 text-muted-foreground text-sm">{o.duration_months} {t.nrMonth}</td>
+                  <td className="p-4 text-foreground font-bold text-sm">{formatPrice(o.total_price)}</td>
+                  <td className="p-4"><Badge className={`${statusColor(o.status)} border-none text-xs`}>{o.status.replace('_', ' ')}</Badge></td>
                 </tr>
               ))}
             </tbody>
@@ -449,7 +489,7 @@ const AdminPage = () => {
   };
 
   const toggleSpaceActive = (id: string) => {
-    setSpaces(prev => prev.map(s => s.id === id ? { ...s, active: !s.active } : s));
+    setSpaces(prev => prev.map(s => s.id === id ? { ...s, is_active: !s.is_active } : s));
   };
 
   const handleAddSpace = () => {
@@ -458,19 +498,19 @@ const AdminPage = () => {
     setShowSpaceForm(true);
   };
 
-  const handleEditSpace = (s: SpaceItem) => {
+  const handleEditSpace = (s: any) => {
     setEditingSpace(s);
-    setSpaceFormData({ name: s.name, nameAr: s.nameAr, type: s.type, capacity: s.capacity });
+    setSpaceFormData({ name: s.name_en, nameAr: s.name_ar, type: s.storage_type_id, capacity: s.capacity.toString() });
     setShowSpaceForm(true);
   };
 
   const handleSaveSpace = () => {
     if (!spaceFormData.name) return;
     if (editingSpace) {
-      setSpaces(prev => prev.map(s => s.id === editingSpace.id ? { ...s, name: spaceFormData.name, nameAr: spaceFormData.nameAr, type: spaceFormData.type, capacity: spaceFormData.capacity } : s));
+      setSpaces(prev => prev.map(s => s.id === editingSpace.id ? { ...s, name_en: spaceFormData.name, name_ar: spaceFormData.nameAr, storage_type_id: spaceFormData.type, capacity: parseInt(spaceFormData.capacity) } : s));
     } else {
       const newId = `S-${String(spaces.length + 1).padStart(2, "0")}`;
-      setSpaces(prev => [...prev, { id: newId, name: spaceFormData.name, nameAr: spaceFormData.nameAr, type: spaceFormData.type, capacity: spaceFormData.capacity, used: "0", percent: 0, status: t.adminAvailable, active: true }]);
+      setSpaces(prev => [...prev, { id: newId, name_en: spaceFormData.name, name_ar: spaceFormData.nameAr, storage_type_id: spaceFormData.type, capacity: parseInt(spaceFormData.capacity), used_capacity: 0, status: 'available', is_active: true }]);
     }
     setShowSpaceForm(false);
     toast({ title: t.settingsSaved });
@@ -480,7 +520,6 @@ const AdminPage = () => {
   const SpaceDetailsContent = () => {
     const space = spaces.find(s => s.id === selectedSpace);
     if (!space) return null;
-    const items = mockStoredItems[space.id] || [];
 
     return (
       <div className="space-y-4 md:space-y-6">
@@ -489,7 +528,7 @@ const AdminPage = () => {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h2 className="text-base md:text-xl font-bold text-foreground">{lang === "ar" ? space.nameAr || space.name : space.name}</h2>
+            <h2 className="text-base md:text-xl font-bold text-foreground">{lang === "ar" ? space.name_ar : space.name_en}</h2>
             <p className="text-xs text-muted-foreground">{t.adminSpaceDetails}</p>
           </div>
         </div>
@@ -498,76 +537,26 @@ const AdminPage = () => {
         <div className="glass rounded-xl p-4 md:p-6">
           <h3 className="font-bold text-foreground text-sm md:text-base mb-4">{t.adminSpaceInfo}</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs md:text-sm">
-            <div><span className="text-muted-foreground block">{t.adminSpaceName}</span><span className="text-foreground font-medium">{lang === "ar" ? space.nameAr || space.name : space.name}</span></div>
-            <div><span className="text-muted-foreground block">{t.adminSpaceType}</span><span className="text-foreground font-medium">{space.type}</span></div>
-            <div><span className="text-muted-foreground block">{t.adminSpaceCapacity}</span><span className="text-foreground font-medium">{space.capacity}</span></div>
-            <div><span className="text-muted-foreground block">{t.adminSpaceUsed}</span><span className="text-foreground font-medium">{space.used}</span></div>
-            <div><span className="text-muted-foreground block">{t.adminSpaceOccupancy}</span><span className="text-primary font-bold">{space.percent}%</span></div>
+            <div><span className="text-muted-foreground block">{t.adminSpaceName}</span><span className="text-foreground font-medium">{lang === "ar" ? space.name_ar : space.name_en}</span></div>
+            <div><span className="text-muted-foreground block">{t.adminSpaceType}</span><span className="text-foreground font-medium">{types.find(t => t.id === space.storage_type_id)?.name_en || '...'}</span></div>
+            <div><span className="text-muted-foreground block">{t.adminSpaceCapacity}</span><span className="text-foreground font-medium">{space.capacity} {t.sqm}</span></div>
+            <div><span className="text-muted-foreground block">{t.adminSpaceUsed}</span><span className="text-foreground font-medium">{space.used_capacity} {t.sqm}</span></div>
+            <div><span className="text-muted-foreground block">{t.adminSpaceOccupancy}</span><span className="text-primary font-bold">{Math.round((space.used_capacity / space.capacity) * 100)}%</span></div>
             <div><span className="text-muted-foreground block">{t.adminThStatus}</span>
               <Badge className={`${statusColor(space.status)} border-none text-[10px] md:text-xs mt-1`}>{space.status}</Badge>
             </div>
             <div><span className="text-muted-foreground block">{t.adminActivateSpace}</span>
-              <Badge className={`${space.active ? "bg-emerald-500/20 text-emerald-400" : "bg-muted text-muted-foreground"} border-none text-[10px] md:text-xs mt-1`}>
-                {space.active ? t.adminSpaceActive : t.adminSpaceInactive}
+              <Badge className={`${space.is_active ? "bg-emerald-500/20 text-emerald-400" : "bg-muted text-muted-foreground"} border-none text-[10px] md:text-xs mt-1`}>
+                {space.is_active ? t.adminSpaceActive : t.adminSpaceInactive}
               </Badge>
             </div>
           </div>
           <div className="mt-4 h-2 md:h-3 bg-muted rounded-full overflow-hidden">
-            <div className={`h-full rounded-full transition-all ${space.percent > 85 ? "bg-red-500" : space.percent > 60 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${space.percent}%` }} />
+            <div
+              className={`h-full rounded-full transition-all ${(space.used_capacity / space.capacity) > 0.85 ? "bg-red-500" : (space.used_capacity / space.capacity) > 0.6 ? "bg-amber-500" : "bg-emerald-500"}`}
+              style={{ width: `${(space.used_capacity / space.capacity) * 100}%` }}
+            />
           </div>
-        </div>
-
-        {/* Related Items Table */}
-        <div className="glass rounded-xl p-4 md:p-6">
-          <h3 className="font-bold text-foreground text-sm md:text-base mb-4">{t.adminRelatedItems} ({items.length})</h3>
-          {items.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">{lang === "ar" ? "لا توجد عناصر مخزنة" : "No stored items"}</p>
-          ) : isMobile ? (
-            <div className="space-y-3">
-              {items.map(item => (
-                <div key={item.id} className="bg-muted/20 rounded-lg p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-primary text-xs">{item.id}</span>
-                    <Badge className={`${item.remainingDays <= 15 ? "bg-red-500/20 text-red-400" : item.remainingDays <= 30 ? "bg-amber-500/20 text-amber-400" : "bg-emerald-500/20 text-emerald-400"} border-none text-[10px]`}>
-                      {item.remainingDays} {t.adminDays}
-                    </Badge>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div><span className="text-muted-foreground">{t.adminThItem}</span><p className="text-foreground mt-0.5">{item.item}</p></div>
-                    <div><span className="text-muted-foreground">{t.adminThOwner}</span><p className="text-foreground mt-0.5">{item.owner}</p></div>
-                    <div><span className="text-muted-foreground">{t.adminThStartDate}</span><p className="text-foreground mt-0.5">{item.startDate}</p></div>
-                    <div><span className="text-muted-foreground">{t.adminThEndDate}</span><p className="text-foreground mt-0.5">{item.endDate}</p></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  {[t.adminThItemId, t.adminThItem, t.adminThOwner, t.adminThRemainingDuration, t.adminThStartDate, t.adminThEndDate].map(h => (
-                    <th key={h} className={`${textAlign} p-3 text-sm font-medium text-muted-foreground`}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {items.map(item => (
-                  <tr key={item.id} className="border-b border-border/50 hover:bg-muted/10">
-                    <td className="p-3 font-medium text-primary text-sm">{item.id}</td>
-                    <td className="p-3 text-foreground text-sm">{item.item}</td>
-                    <td className="p-3 text-muted-foreground text-sm">{item.owner}</td>
-                    <td className="p-3">
-                      <Badge className={`${item.remainingDays <= 15 ? "bg-red-500/20 text-red-400" : item.remainingDays <= 30 ? "bg-amber-500/20 text-amber-400" : "bg-emerald-500/20 text-emerald-400"} border-none text-xs`}>
-                        {item.remainingDays} {t.adminDays}
-                      </Badge>
-                    </td>
-                    <td className="p-3 text-muted-foreground text-sm">{item.startDate}</td>
-                    <td className="p-3 text-muted-foreground text-sm">{item.endDate}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
         </div>
       </div>
     );
@@ -594,10 +583,7 @@ const AdminPage = () => {
               <Select value={spaceFormData.type} onValueChange={v => setSpaceFormData({ ...spaceFormData, type: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={t.adminNormal}>{t.adminNormal}</SelectItem>
-                  <SelectItem value={t.adminCold}>{t.adminCold}</SelectItem>
-                  <SelectItem value={t.adminHighSecurityType}>{t.adminHighSecurityType}</SelectItem>
-                  <SelectItem value={t.adminCars}>{t.adminCars}</SelectItem>
+                  {types.map(t => <SelectItem key={t.id} value={t.id}>{t.name_en}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -606,9 +592,9 @@ const AdminPage = () => {
               <Input value={spaceFormData.capacity} onChange={e => setSpaceFormData({ ...spaceFormData, capacity: e.target.value })} placeholder={`100 ${t.adminSqm}`} />
             </div>
           </div>
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" size="sm" onClick={() => setShowSpaceForm(false)}>{t.adminCancel}</Button>
-            <Button size="sm" onClick={handleSaveSpace}>{t.adminSave}</Button>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={() => setShowSpaceForm(false)}>{t.adminCancel}</Button>
+            <Button onClick={handleSaveSpace}>{t.adminSave}</Button>
           </div>
         </div>
       </div>
@@ -629,28 +615,28 @@ const AdminPage = () => {
         </div>
         <div className="grid sm:grid-cols-2 gap-4 md:gap-6">
           {spaces.map((s) => (
-            <div key={s.id} className={`glass rounded-xl p-4 md:p-6 cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all ${!s.active ? "opacity-60" : ""}`}
+            <div key={s.id} className={`glass rounded-xl p-4 md:p-6 cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all ${!s.is_active ? "opacity-60" : ""}`}
               onClick={() => setSelectedSpace(s.id)}>
               <div className="flex items-center justify-between mb-3 md:mb-4">
-                <h3 className="font-bold text-foreground text-sm md:text-base">{lang === "ar" ? s.nameAr || s.name : s.name}</h3>
+                <h3 className="font-bold text-foreground text-sm md:text-base">{lang === "ar" ? s.name_ar : s.name_en}</h3>
                 <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                   <Badge className={`${statusColor(s.status)} border-none text-[10px] md:text-xs`}>{s.status}</Badge>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 md:gap-4 text-xs md:text-sm mb-3 md:mb-4">
-                <div><span className="text-muted-foreground">{t.adminSpaceType}</span> <span className="text-foreground font-medium">{s.type}</span></div>
-                <div><span className="text-muted-foreground">{t.adminSpaceCapacity}</span> <span className="text-foreground font-medium">{s.capacity}</span></div>
-                <div><span className="text-muted-foreground">{t.adminSpaceUsed}</span> <span className="text-foreground font-medium">{s.used}</span></div>
-                <div><span className="text-muted-foreground">{t.adminSpaceOccupancy}</span> <span className="text-primary font-bold">{s.percent}%</span></div>
+                <div><span className="text-muted-foreground">{t.adminSpaceType}</span> <span className="text-foreground font-medium">{types.find(t => t.id === s.storage_type_id)?.name_en || '...'}</span></div>
+                <div><span className="text-muted-foreground">{t.adminSpaceCapacity}</span> <span className="text-foreground font-medium">{s.capacity} {t.sqm}</span></div>
+                <div><span className="text-muted-foreground">{t.adminSpaceUsed}</span> <span className="text-foreground font-medium">{s.used_capacity} {t.sqm}</span></div>
+                <div><span className="text-muted-foreground">{t.adminSpaceOccupancy}</span> <span className="text-primary font-bold">{Math.round((s.used_capacity / s.capacity) * 100)}%</span></div>
               </div>
               <div className="h-2 md:h-3 bg-muted rounded-full overflow-hidden mb-3">
-                <div className={`h-full rounded-full transition-all ${s.percent > 85 ? "bg-red-500" : s.percent > 60 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${s.percent}%` }} />
+                <div className={`h-full rounded-full transition-all ${(s.used_capacity / s.capacity) > 0.85 ? "bg-red-500" : (s.used_capacity / s.capacity) > 0.6 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${(s.used_capacity / s.capacity) * 100}%` }} />
               </div>
               <div className="flex items-center justify-between pt-2 border-t border-border/50" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center gap-2">
-                  <Switch checked={s.active} onCheckedChange={() => toggleSpaceActive(s.id)} />
-                  <span className={`text-xs ${s.active ? "text-emerald-400" : "text-muted-foreground"}`}>
-                    {s.active ? t.adminSpaceActive : t.adminSpaceInactive}
+                  <Switch checked={s.is_active} onCheckedChange={() => toggleSpaceActive(s.id)} />
+                  <span className={`text-xs ${s.is_active ? "text-emerald-400" : "text-muted-foreground"}`}>
+                    {s.is_active ? t.adminSpaceActive : t.adminSpaceInactive}
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -672,19 +658,26 @@ const AdminPage = () => {
 
   // ─── Pricing ───
   const PricingContent = () => {
+    const pricing = types.map(type => ({
+      id: type.id,
+      storage_types: type,
+      price_per_sqm: type.price_per_sqm || 0,
+      min_area: type.min_area || 0,
+      min_duration_months: type.min_duration_months || 1
+    }));
     if (isMobile) {
       return (
         <div className="space-y-3">
           <h2 className="text-base font-bold text-foreground">{t.adminManagePricing}</h2>
-          {mockPricing.map((p) => (
-            <div key={p.type} className="glass rounded-xl p-4 space-y-2">
+          {pricing.map((p) => (
+            <div key={p.id} className="glass rounded-xl p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="font-medium text-foreground text-sm">{p.type}</span>
-                <span className="text-primary font-bold text-sm">{formatPrice(p.pricePerM2)}</span>
+                <span className="font-medium text-foreground text-sm">{lang === 'ar' ? p.storage_types.name_ar : p.storage_types.name_en}</span>
+                <span className="text-primary font-bold text-sm">{formatPrice(p.price_per_sqm)}</span>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div><span className="text-muted-foreground">{t.adminThMinArea}</span><p className="text-foreground mt-0.5">{p.minArea} {t.adminSqm}</p></div>
-                <div><span className="text-muted-foreground">{t.adminThMinDuration}</span><p className="text-foreground mt-0.5">{p.minDuration} {t.adminMonth}</p></div>
+                <div><span className="text-muted-foreground">{t.adminThMinArea}</span><p className="text-foreground mt-0.5">{p.min_area} {t.adminSqm}</p></div>
+                <div><span className="text-muted-foreground">{t.adminThMinDuration}</span><p className="text-foreground mt-0.5">{p.min_duration_months} {t.adminMonth}</p></div>
               </div>
               <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 text-xs w-full">{t.adminEdit}</Button>
             </div>
@@ -705,12 +698,12 @@ const AdminPage = () => {
               </tr>
             </thead>
             <tbody>
-              {mockPricing.map((p) => (
-                <tr key={p.type} className="border-b border-border/50 hover:bg-muted/10">
-                  <td className="p-4 font-medium text-foreground text-sm">{p.type}</td>
-                  <td className="p-4 text-primary font-bold text-sm">{formatPrice(p.pricePerM2)}</td>
-                  <td className="p-4 text-muted-foreground text-sm">{p.minArea} {t.adminSqm}</td>
-                  <td className="p-4 text-muted-foreground text-sm">{p.minDuration} {t.adminMonth}</td>
+              {pricing.map((p) => (
+                <tr key={p.id} className="border-b border-border/50 hover:bg-muted/10">
+                  <td className="p-4 font-medium text-foreground text-sm">{lang === 'ar' ? p.storage_types.name_ar : p.storage_types.name_en}</td>
+                  <td className="p-4 text-primary font-bold text-sm">{formatPrice(p.price_per_sqm)}</td>
+                  <td className="p-4 text-muted-foreground text-sm">{p.min_area} {t.adminSqm}</td>
+                  <td className="p-4 text-muted-foreground text-sm">{p.min_duration_months} {t.adminMonth}</td>
                   <td className="p-4"><Button variant="ghost" size="sm" className="text-primary hover:text-primary/80">{t.adminEdit}</Button></td>
                 </tr>
               ))}
@@ -723,8 +716,7 @@ const AdminPage = () => {
 
   // ─── Users ───
   const UsersContent = () => {
-    const selectedUserData = selectedUser ? mockUsers.find(u => u.id === selectedUser) : null;
-    const userOrders = selectedUser ? (mockUserOrders[selectedUser] || []) : [];
+    const selectedUserData = selectedUser ? profiles.find(u => u.id === selectedUser) : null;
 
     // User Details View
     if (selectedUserData) {
@@ -735,43 +727,39 @@ const AdminPage = () => {
           </Button>
           <h2 className={`text-xl font-bold text-foreground ${isMobile ? "text-base" : ""}`}>{t.adminUserDetails}</h2>
 
-          {/* User Info Card */}
           <div className="glass rounded-xl p-6 space-y-4">
             <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
               <User className="w-5 h-5 text-primary" /> {t.adminUserInfo}
             </h3>
             <div className={`grid ${isMobile ? "grid-cols-1 gap-3" : "grid-cols-2 lg:grid-cols-3 gap-4"}`}>
-              <div><span className="text-xs text-muted-foreground">{t.adminThName}</span><p className="text-sm font-medium text-foreground mt-1">{selectedUserData.name}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminThName}</span><p className="text-sm font-medium text-foreground mt-1">{selectedUserData.full_name}</p></div>
               <div><span className="text-xs text-muted-foreground">{t.adminThEmail}</span><p className="text-sm font-medium text-foreground mt-1">{selectedUserData.email}</p></div>
-              <div><span className="text-xs text-muted-foreground">{t.adminThPhone}</span><p className="text-sm font-medium text-foreground mt-1" dir="ltr">{selectedUserData.phone}</p></div>
-              <div><span className="text-xs text-muted-foreground">{t.adminThUserType}</span><p className="mt-1"><Badge className={`${selectedUserData.type === t.adminCompany ? "bg-secondary/20 text-secondary" : "bg-primary/20 text-primary"} border-none text-xs`}>{selectedUserData.type}</Badge></p></div>
-              <div><span className="text-xs text-muted-foreground">{t.adminUserSince}</span><p className="text-sm font-medium text-foreground mt-1">{selectedUserData.joined}</p></div>
-              <div><span className="text-xs text-muted-foreground">{t.adminTotalSpent}</span><p className="text-sm font-medium text-emerald-400 mt-1">{formatPrice(selectedUserData.totalSpent)}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminThPhone}</span><p className="text-sm font-medium text-foreground mt-1" dir="ltr">{selectedUserData.phone || '-'}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminThUserType}</span><p className="mt-1"><Badge className={`${selectedUserData.user_type === 'company' ? "bg-secondary/20 text-secondary" : "bg-primary/20 text-primary"} border-none text-xs`}>{selectedUserData.user_type}</Badge></p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminUserSince}</span><p className="text-sm font-medium text-foreground mt-1">{new Date(selectedUserData.created_at).toLocaleDateString()}</p></div>
             </div>
           </div>
 
           {/* User Orders Table */}
           <div className="glass rounded-xl p-6 space-y-4">
             <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <ClipboardList className="w-5 h-5 text-primary" /> {t.adminUserOrders} ({userOrders.length})
+              <ClipboardList className="w-5 h-5 text-primary" /> {t.adminUserOrders}
             </h3>
-            {userOrders.length === 0 ? (
-              <p className="text-muted-foreground text-sm">{lang === "ar" ? "لا توجد طلبات" : "No orders found"}</p>
-            ) : isMobile ? (
+            {isMobile ? (
               <div className="space-y-3">
-                {userOrders.map(o => (
+                {orders.filter(o => o.user_id === selectedUser).map(o => (
                   <div key={o.id} className="bg-muted/20 rounded-lg p-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs text-primary">{o.id}</span>
-                      <Badge className={`${statusColor(o.status)} border-none text-[10px]`}>{o.status}</Badge>
+                      <span className="font-mono text-xs text-primary">{o.id.split('-')[0].toUpperCase()}</span>
+                      <Badge className={`${statusColor(o.status)} border-none text-[10px]`}>{o.status.replace('_', ' ')}</Badge>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div><span className="text-muted-foreground">{t.adminThType}</span><p className="text-foreground mt-0.5">{o.type}</p></div>
-                      <div><span className="text-muted-foreground">{t.adminThArea}</span><p className="text-foreground mt-0.5">{o.area}</p></div>
-                      <div><span className="text-muted-foreground">{t.adminThDuration}</span><p className="text-foreground mt-0.5">{o.duration}</p></div>
-                      <div><span className="text-muted-foreground">{t.adminThTotal}</span><p className="text-foreground mt-0.5">{formatPrice(o.total)}</p></div>
+                      <div><span className="text-muted-foreground">{t.adminThType}</span><p className="text-foreground mt-0.5">{lang === 'ar' ? o.storage_types.name_ar : o.storage_types.name_en}</p></div>
+                      <div><span className="text-muted-foreground">{t.adminThArea}</span><p className="text-foreground mt-0.5">{o.area} {t.sqm}</p></div>
+                      <div><span className="text-muted-foreground">{t.adminThDuration}</span><p className="text-foreground mt-0.5">{o.duration_months} {t.nrMonth}</p></div>
+                      <div><span className="text-muted-foreground">{t.adminThTotal}</span><p className="text-foreground mt-0.5">{formatPrice(o.total_price)}</p></div>
                     </div>
-                    <div className="text-[10px] text-muted-foreground">{t.thDate}: {o.date}</div>
+                    <div className="text-[10px] text-muted-foreground">{t.thDate}: {new Date(o.created_at).toLocaleDateString()}</div>
                   </div>
                 ))}
               </div>
@@ -786,15 +774,15 @@ const AdminPage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {userOrders.map(o => (
+                    {orders.filter(o => o.user_id === selectedUser).map(o => (
                       <tr key={o.id} className="border-b border-border/30 hover:bg-muted/10">
-                        <td className="p-3 font-mono text-xs text-primary">{o.id}</td>
-                        <td className="p-3 text-sm text-foreground">{o.type}</td>
-                        <td className="p-3 text-sm text-muted-foreground">{o.area}</td>
-                        <td className="p-3 text-sm text-muted-foreground">{o.duration}</td>
-                        <td className="p-3 text-sm font-medium text-foreground">{formatPrice(o.total)}</td>
-                        <td className="p-3"><Badge className={`${statusColor(o.status)} border-none text-xs`}>{o.status}</Badge></td>
-                        <td className="p-3 text-sm text-muted-foreground">{o.date}</td>
+                        <td className="p-3 font-mono text-xs text-primary">{o.id.split('-')[0].toUpperCase()}</td>
+                        <td className="p-3 text-sm text-foreground">{lang === 'ar' ? o.storage_types.name_ar : o.storage_types.name_en}</td>
+                        <td className="p-3 text-sm text-muted-foreground">{o.area} {t.sqm}</td>
+                        <td className="p-3 text-sm text-muted-foreground">{o.duration_months} {t.nrMonth}</td>
+                        <td className="p-3 text-sm font-medium text-foreground">{formatPrice(o.total_price)}</td>
+                        <td className="p-3"><Badge className={`${statusColor(o.status)} border-none text-xs`}>{o.status.replace('_', ' ')}</Badge></td>
+                        <td className="p-3 text-sm text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -811,17 +799,17 @@ const AdminPage = () => {
       return (
         <div className="space-y-3">
           <h2 className="text-base font-bold text-foreground">{t.adminManageUsers}</h2>
-          {mockUsers.map((u) => (
-            <div key={u.email} className="glass rounded-xl p-4 space-y-2 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setSelectedUser(u.id)}>
+          {profiles.map((u) => (
+            <div key={u.id} className="glass rounded-xl p-4 space-y-2 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setSelectedUser(u.id)}>
               <div className="flex items-center justify-between">
-                <span className="font-medium text-foreground text-sm">{u.name}</span>
-                <Badge className={`${u.type === t.adminCompany ? "bg-secondary/20 text-secondary" : "bg-primary/20 text-primary"} border-none text-[10px]`}>{u.type}</Badge>
+                <span className="font-medium text-foreground text-sm">{u.full_name}</span>
+                <Badge className={`${u.user_type === 'company' ? "bg-secondary/20 text-secondary" : "bg-primary/20 text-primary"} border-none text-[10px]`}>{u.user_type}</Badge>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div><span className="text-muted-foreground">{t.adminThEmail}</span><p className="text-foreground mt-0.5 truncate">{u.email}</p></div>
-                <div><span className="text-muted-foreground">{t.adminThOrderCount}</span><p className="text-foreground mt-0.5">{u.orders}</p></div>
+                <div><span className="text-muted-foreground">{t.adminThOrderCount}</span><p className="text-foreground mt-0.5">{orders.filter(o => o.user_id === u.id).length}</p></div>
               </div>
-              <div className="text-[10px] text-muted-foreground">{t.adminThJoinDate}: {u.joined}</div>
+              <div className="text-[10px] text-muted-foreground">{t.adminThJoinDate}: {new Date(u.created_at).toLocaleDateString()}</div>
             </div>
           ))}
         </div>
@@ -840,13 +828,13 @@ const AdminPage = () => {
               </tr>
             </thead>
             <tbody>
-              {mockUsers.map((u) => (
-                <tr key={u.email} className="border-b border-border/50 hover:bg-muted/10 cursor-pointer transition-colors" onClick={() => setSelectedUser(u.id)}>
-                  <td className="p-4 font-medium text-foreground text-sm">{u.name}</td>
+              {profiles.map((u) => (
+                <tr key={u.id} className="border-b border-border/50 hover:bg-muted/10 cursor-pointer transition-colors" onClick={() => setSelectedUser(u.id)}>
+                  <td className="p-4 font-medium text-foreground text-sm">{u.full_name}</td>
                   <td className="p-4 text-muted-foreground text-sm">{u.email}</td>
-                  <td className="p-4"><Badge className={`${u.type === t.adminCompany ? "bg-secondary/20 text-secondary" : "bg-primary/20 text-primary"} border-none text-xs`}>{u.type}</Badge></td>
-                  <td className="p-4 text-muted-foreground text-sm">{u.orders}</td>
-                  <td className="p-4 text-muted-foreground text-sm">{u.joined}</td>
+                  <td className="p-4"><Badge className={`${u.user_type === 'company' ? "bg-secondary/20 text-secondary" : "bg-primary/20 text-primary"} border-none text-xs`}>{u.user_type}</Badge></td>
+                  <td className="p-4 text-muted-foreground text-sm">{orders.filter(o => o.user_id === u.id).length}</td>
+                  <td className="p-4 text-muted-foreground text-sm">{new Date(u.created_at).toLocaleDateString()}</td>
                 </tr>
               ))}
             </tbody>

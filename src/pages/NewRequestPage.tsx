@@ -10,6 +10,18 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { supabase } from "@/lib/supabase";
+import { useEffect } from "react";
+
+interface StorageType {
+  id: string;
+  name_en: string;
+  name_ar: string;
+  description_en: string;
+  description_ar: string;
+  price_per_sqm_month: number;
+  icon_name: string;
+}
 
 interface FormData {
   productName: string;
@@ -56,12 +68,23 @@ const NewRequestPage = () => {
     { id: 5, title: t.nrStep5, icon: FileText },
   ];
 
-  const storageNatures = [
-    { id: "normal", name: t.nrNormalStorage, icon: Warehouse, price: 50, desc: t.nrNormalStorageDesc },
-    { id: "cold", name: t.nrColdStorage, icon: Snowflake, price: 120, desc: t.nrColdStorageDesc },
-    { id: "secure", name: t.nrSecureStorage, icon: ShieldCheck, price: 200, desc: t.nrSecureStorageDesc },
-    { id: "hazardous", name: t.nrHazardousStorage, icon: AlertTriangle, price: 300, desc: t.nrHazardousStorageDesc },
-  ];
+  const [storageNatures, setStorageNatures] = useState<StorageType[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchStorageTypes = async () => {
+      const { data, error } = await supabase
+        .from('storage_types')
+        .select('*');
+      if (data) {
+        setStorageNatures(data);
+        if (data.length > 0 && !form.storageType) {
+          update("storageType", data[0].id);
+        }
+      }
+    };
+    fetchStorageTypes();
+  }, []);
 
   const extraServices = [
     { id: "pickup", name: t.nrPickup, price: 150 },
@@ -91,8 +114,22 @@ const NewRequestPage = () => {
     update("images", form.images.filter((_, i) => i !== index));
   };
 
-  const storageInfo = storageNatures.find((s) => s.id === form.storageType)!;
-  const storagePrice = storageInfo.price * form.area * form.duration;
+  const isRtl = dir === "rtl";
+
+  const getIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'Warehouse': return Warehouse;
+      case 'Snowflake':
+      case 'Thermometer': return Snowflake;
+      case 'ShieldCheck': return ShieldCheck;
+      case 'AlertTriangle': return AlertTriangle;
+      case 'Car': return Car;
+      default: return Warehouse;
+    }
+  };
+
+  const storageInfo = storageNatures.find((s) => s.id === form.storageType);
+  const storagePrice = (storageInfo?.price_per_sqm_month || 0) * form.area * form.duration;
   const extrasPrice = form.extras.reduce((sum, id) => sum + (extraServices.find((e) => e.id === id)?.price || 0), 0) * form.duration;
   const total = storagePrice + extrasPrice;
 
@@ -102,9 +139,58 @@ const NewRequestPage = () => {
     return true;
   };
 
-  const handleSubmit = () => {
-    toast.success(t.nrSuccessMsg, { duration: 4000 });
-    navigate("/dashboard");
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Please login to submit a request");
+        navigate("/auth");
+        return;
+      }
+
+      // Upload images first
+      const imageUrls: string[] = [];
+      for (const img of form.images) {
+        const fileExt = img.file.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(fileName, img.file);
+        
+        if (uploadError) throw uploadError;
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(fileName);
+        
+        imageUrls.push(publicUrl);
+      }
+
+      const { error } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user.id,
+          storage_type_id: form.storageType,
+          area: form.area,
+          duration_months: form.duration,
+          total_price: total,
+          pickup_address: form.pickupAddress,
+          delivery_address: form.deliveryAddress,
+          notes: form.description,
+          product_images: imageUrls,
+          status: 'under_review'
+        });
+
+      if (error) throw error;
+
+      toast.success(t.nrSuccessMsg, { duration: 4000 });
+      navigate("/dashboard");
+    } catch (error: any) {
+      toast.error(error.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const isRtl = dir === "rtl";
@@ -168,13 +254,13 @@ const NewRequestPage = () => {
         {/* Step Content */}
         <div className="glass rounded-2xl p-6 md:p-10 mb-8">
           {step === 1 && <Step1 form={form} update={update} t={t} />}
-          {step === 2 && <Step2 form={form} update={update} t={t} storageNatures={storageNatures} />}
+          {step === 2 && <Step2 form={form} update={update} t={t} storageNatures={storageNatures} getIcon={getIcon} lang={lang} />}
           {step === 3 && <Step3 form={form} toggleExtra={toggleExtra} update={update} t={t} extraServices={extraServices} />}
           {step === 4 && (
             <Step4 images={form.images} addImages={addImages} removeImage={removeImage} fileInputRef={fileInputRef} t={t} />
           )}
           {step === 5 && (
-            <Step5 form={form} storageInfo={storageInfo} storagePrice={storagePrice} extrasPrice={extrasPrice} total={total} t={t} extraServices={extraServices} />
+            <Step5 form={form} storageInfo={storageInfo} lang={lang} storagePrice={storagePrice} extrasPrice={extrasPrice} total={total} t={t} extraServices={extraServices} />
           )}
         </div>
 
@@ -203,8 +289,13 @@ const NewRequestPage = () => {
             <Button
               className="bg-gradient-gold text-primary-foreground font-bold glow-gold hover:opacity-90 px-8"
               onClick={handleSubmit}
+              disabled={loading}
             >
-              <Check className="w-4 h-4 me-2" />
+              {loading ? (
+                <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin me-2" />
+              ) : (
+                <Check className="w-4 h-4 me-2" />
+              )}
               {t.nrSubmit}
             </Button>
           )}
@@ -258,11 +349,13 @@ const Step1 = ({ form, update, t }: { form: FormData; update: <K extends keyof F
 );
 
 /* ── Step 2: Storage Config ── */
-const Step2 = ({ form, update, t, storageNatures }: {
+const Step2 = ({ form, update, t, storageNatures, getIcon, lang }: {
   form: FormData;
   update: <K extends keyof FormData>(k: K, v: FormData[K]) => void;
   t: T;
-  storageNatures: { id: string; name: string; icon: any; price: number; desc: string }[];
+  storageNatures: StorageType[];
+  getIcon: (name: string) => any;
+  lang: string;
 }) => (
   <div className="space-y-6">
     <h2 className="text-xl font-bold text-foreground mb-2">{t.nrStorageConfig}</h2>
@@ -271,21 +364,24 @@ const Step2 = ({ form, update, t, storageNatures }: {
     <div>
       <Label className="text-foreground mb-3 block">{t.nrStorageType}</Label>
       <div className="grid sm:grid-cols-2 gap-3">
-        {storageNatures.map((type) => (
-          <button key={type.id} onClick={() => update("storageType", type.id)}
-            className={`flex items-start gap-3 p-4 rounded-xl border-2 text-start transition-all ${
-              form.storageType === type.id ? "border-primary bg-primary/10" : "border-border hover:border-muted-foreground/30"
-            }`}>
-            <div className={`p-2 rounded-lg shrink-0 ${form.storageType === type.id ? "bg-gradient-gold" : "bg-muted"}`}>
-              <type.icon className={`w-5 h-5 ${form.storageType === type.id ? "text-primary-foreground" : "text-muted-foreground"}`} />
-            </div>
-            <div>
-              <div className="font-bold text-foreground text-sm">{type.name}</div>
-              <div className="text-xs text-muted-foreground">{type.desc}</div>
-              <div className="text-primary font-bold text-xs mt-1">{type.price} {t.nrPriceUnit}</div>
-            </div>
-          </button>
-        ))}
+        {storageNatures.map((type) => {
+          const Icon = getIcon(type.icon_name);
+          return (
+            <button key={type.id} onClick={() => update("storageType", type.id)}
+              className={`flex items-start gap-3 p-4 rounded-xl border-2 text-start transition-all ${
+                form.storageType === type.id ? "border-primary bg-primary/10" : "border-border hover:border-muted-foreground/30"
+              }`}>
+              <div className={`p-2 rounded-lg shrink-0 ${form.storageType === type.id ? "bg-gradient-gold" : "bg-muted"}`}>
+                <Icon className={`w-5 h-5 ${form.storageType === type.id ? "text-primary-foreground" : "text-muted-foreground"}`} />
+              </div>
+              <div>
+                <div className="font-bold text-foreground text-sm">{lang === 'ar' ? type.name_ar : type.name_en}</div>
+                <div className="text-xs text-muted-foreground">{lang === 'ar' ? type.description_ar : type.description_en}</div>
+                <div className="text-primary font-bold text-xs mt-1">{type.price_per_sqm_month} {t.nrPriceUnit}</div>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
 
@@ -450,10 +546,10 @@ const Step5 = ({ form, storageInfo, storagePrice, extrasPrice, total, t, extraSe
           <Settings2 className="w-4 h-4 text-primary" /> {t.nrStorageSettings}
         </h3>
         <div className="grid sm:grid-cols-2 gap-3 text-sm">
-          <div><span className="text-muted-foreground">{t.nrStorageTypeLabel}</span> <span className="text-foreground font-medium ms-1">{storageInfo.name}</span></div>
+          <div><span className="text-muted-foreground">{t.nrStorageTypeLabel}</span> <span className="text-foreground font-medium ms-1">{storageInfo ? (lang === 'ar' ? storageInfo.name_ar : storageInfo.name_en) : ''}</span></div>
           <div><span className="text-muted-foreground">{t.nrAreaLabel}</span> <span className="text-foreground font-medium ms-1">{form.area} {t.nrSqm}</span></div>
           <div><span className="text-muted-foreground">{t.nrDurationLabel}</span> <span className="text-foreground font-medium ms-1">{form.duration} {t.nrMonth}</span></div>
-          <div><span className="text-muted-foreground">{t.nrPriceLabel}</span> <span className="text-primary font-bold ms-1">{storageInfo.price} {t.nrSarSqmMonth}</span></div>
+          <div><span className="text-muted-foreground">{t.nrPriceLabel}</span> <span className="text-primary font-bold ms-1">{storageInfo?.price_per_sqm_month} {t.nrSarSqmMonth}</span></div>
         </div>
       </div>
 
