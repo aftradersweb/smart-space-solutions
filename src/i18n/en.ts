@@ -420,6 +420,13 @@ const en = {
   adminAvailable: "Available",
   adminAlmostFull: "Almost Full",
   adminFull: "Full",
+  adminConfirmApprove: "Are you sure you want to approve this order?",
+  adminConfirmReject: "Are you sure you want to reject this order?",
+  adminConfirmTitle: "Confirm Action",
+  adminCancel: "Cancel",
+  adminConfirm: "Confirm",
+  adminOrderApprovedSuccess: "Order approved successfully",
+  adminOrderRejectedSuccess: "Order rejected successfully",
   // Admin data
   adminCompanyAlaman: "Al-Aman Co.",
   adminAhmedMohammed: "Ahmed Mohammed",
