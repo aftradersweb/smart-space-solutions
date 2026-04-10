@@ -48,12 +48,7 @@ const AdminPage = () => {
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ type: "approve" | "reject"; orderId: string } | null>(null);
-  const [orders, setOrders] = useState(() => [
-    { id: "ORD-001", client: "", type: "", area: "", duration: "", totalSar: 4500, status: "underReview", date: "2026-03-20", extras: [] as string[], notes: "" },
-    { id: "ORD-002", client: "", type: "", area: "", duration: "", totalSar: 3600, status: "approved", date: "2026-03-18", extras: [] as string[], notes: "" },
-    { id: "ORD-003", client: "", type: "", area: "", duration: "", totalSar: 3000, status: "completed", date: "2026-03-10", extras: [] as string[], notes: "" },
-    { id: "ORD-004", client: "", type: "", area: "", duration: "", totalSar: 3000, status: "rejected", date: "2026-03-05", extras: [] as string[], notes: "" },
-  ]);
+  const [orderStatusOverrides, setOrderStatusOverrides] = useState<Record<string, string>>({});
 
   const [spaces, setSpaces] = useState<SpaceItem[]>([
     { id: "S-01", name: "Warehouse A - Section 1", nameAr: "المستودع A - القسم 1", type: t.adminNormal, capacity: `500 ${t.adminSqm}`, used: `380 ${t.adminSqm}`, percent: 76, status: t.adminAvailable, active: true },
