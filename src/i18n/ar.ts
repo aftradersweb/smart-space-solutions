@@ -528,6 +528,13 @@ const ar = {
   adminOrderStatus: "الحالة",
   adminOrderExtras: "خدمات إضافية",
   adminOrderNotes: "ملاحظات",
+
+  // Footer
+  footerPrivacyPolicy: "سياسة الخصوصية",
+  footerTerms: "الشروط والأحكام",
+  footerFAQ: "الأسئلة الشائعة",
+  footerFollowUs: "تابعنا",
+  footerLinks: "روابط سريعة",
 };
 
 export default ar;

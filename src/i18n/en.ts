@@ -528,6 +528,13 @@ const en = {
   adminOrderStatus: "Status",
   adminOrderExtras: "Additional Services",
   adminOrderNotes: "Notes",
+
+  // Footer
+  footerPrivacyPolicy: "Privacy Policy",
+  footerTerms: "Terms & Conditions",
+  footerFAQ: "FAQ",
+  footerFollowUs: "Follow Us",
+  footerLinks: "Quick Links",
 };
 
 export default en;
