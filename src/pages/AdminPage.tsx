@@ -47,6 +47,8 @@ const AdminPage = () => {
   // Orders state
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ type: "approve" | "reject"; orderId: string } | null>(null);
+  const [orderStatusOverrides, setOrderStatusOverrides] = useState<Record<string, string>>({});
 
   const [spaces, setSpaces] = useState<SpaceItem[]>([
     { id: "S-01", name: "Warehouse A - Section 1", nameAr: "المستودع A - القسم 1", type: t.adminNormal, capacity: `500 ${t.adminSqm}`, used: `380 ${t.adminSqm}`, percent: 76, status: t.adminAvailable, active: true },
@@ -91,7 +93,14 @@ const AdminPage = () => {
     { id: "ORD-002", client: t.adminAhmedMohammed, type: t.adminColdStorage, area: `30 ${t.adminSqm}`, duration: `1 ${t.adminMonth}`, totalSar: 3600, status: t.adminApproved, date: "2026-03-18", extras: [t.nrDelivery], notes: lang === "ar" ? "مواد غذائية - تحتاج تبريد مستمر" : "Food items - requires continuous cooling" },
     { id: "ORD-003", client: t.adminCompanyNokhba, type: t.adminCarStorage, area: "-", duration: `6 ${t.adminMonths}`, totalSar: 3000, status: t.adminCompleted, date: "2026-03-10", extras: [], notes: lang === "ar" ? "سيارة تويوتا كامري 2025" : "Toyota Camry 2025" },
     { id: "ORD-004", client: t.adminSaraAhmed, type: t.adminHazardous, area: `5 ${t.adminSqm}`, duration: `2 ${t.adminMonths}`, totalSar: 3000, status: t.adminRejected, date: "2026-03-05", extras: [t.nrPacking, t.nrInsurance], notes: lang === "ar" ? "مواد كيميائية - مرفوض لعدم استيفاء الشروط" : "Chemicals - rejected due to unmet requirements" },
-  ];
+  ].map(o => ({ ...o, status: orderStatusOverrides[o.id] || o.status }));
+
+  const handleOrderStatusChange = (orderId: string, newStatus: "approve" | "reject") => {
+    const statusValue = newStatus === "approve" ? t.adminApproved : t.adminRejected;
+    setOrderStatusOverrides(prev => ({ ...prev, [orderId]: statusValue }));
+    setConfirmAction(null);
+    toast({ title: newStatus === "approve" ? t.adminOrderApprovedSuccess : t.adminOrderRejectedSuccess });
+  };
 
   const mockSpaces = spaces;
 
@@ -365,10 +374,10 @@ const AdminPage = () => {
           {/* Actions for pending orders */}
           {selectedOrderData.status === t.adminUnderReview && (
             <div className="flex gap-3">
-              <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setConfirmAction({ type: "approve", orderId: selectedOrderData.id })}>
                 <CheckCircle className="w-4 h-4" /> {t.adminApproved}
               </Button>
-              <Button variant="destructive" className="gap-2">
+              <Button variant="destructive" className="gap-2" onClick={() => setConfirmAction({ type: "reject", orderId: selectedOrderData.id })}>
                 <XCircle className="w-4 h-4" /> {t.adminRejected}
               </Button>
             </div>
@@ -1064,6 +1073,28 @@ const AdminPage = () => {
           {tab === "users" && <UsersContent />}
           {tab === "settings" && <SettingsContent />}
         </main>
+        {/* Confirmation Dialog */}
+        {confirmAction && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmAction(null)}>
+            <div className="bg-card rounded-xl p-6 w-full max-w-sm space-y-4 border border-border" onClick={e => e.stopPropagation()}>
+              <h3 className="font-bold text-foreground text-base">{t.adminConfirmTitle}</h3>
+              <p className="text-sm text-muted-foreground">
+                {confirmAction.type === "approve" ? t.adminConfirmApprove : t.adminConfirmReject}
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" size="sm" onClick={() => setConfirmAction(null)}>{t.adminCancel}</Button>
+                <Button
+                  size="sm"
+                  className={confirmAction.type === "approve" ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}
+                  variant={confirmAction.type === "reject" ? "destructive" : "default"}
+                  onClick={() => handleOrderStatusChange(confirmAction.orderId, confirmAction.type)}
+                >
+                  {t.adminConfirm}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

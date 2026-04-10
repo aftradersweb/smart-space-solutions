@@ -420,6 +420,13 @@ const ar = {
   adminAvailable: "متاح",
   adminAlmostFull: "شبه ممتلئ",
   adminFull: "ممتلئ",
+  adminConfirmApprove: "هل أنت متأكد من الموافقة على هذا الطلب؟",
+  adminConfirmReject: "هل أنت متأكد من رفض هذا الطلب؟",
+  adminConfirmTitle: "تأكيد الإجراء",
+  adminCancel: "إلغاء",
+  adminConfirm: "تأكيد",
+  adminOrderApprovedSuccess: "تمت الموافقة على الطلب بنجاح",
+  adminOrderRejectedSuccess: "تم رفض الطلب بنجاح",
   // Admin data
   adminCompanyAlaman: "شركة الأمان",
   adminAhmedMohammed: "أحمد محمد",
@@ -495,7 +502,7 @@ const ar = {
   adminDays: "يوم",
   adminAddSpaceTitle: "إضافة مساحة جديدة",
   adminEditSpaceTitle: "تعديل المساحة",
-  adminCancel: "إلغاء",
+  // adminCancel already defined above
   adminSave: "حفظ",
   adminCapacity: "السعة",
 
