@@ -502,7 +502,7 @@ const en = {
   adminDays: "days",
   adminAddSpaceTitle: "Add New Space",
   adminEditSpaceTitle: "Edit Space",
-  adminCancel: "Cancel",
+  // adminCancel already defined above
   adminSave: "Save",
   adminCapacity: "Capacity",
 
