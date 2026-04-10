@@ -12,6 +12,7 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import MobileTopBar from "@/components/MobileTopBar";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useEffect } from "react";
 
@@ -29,8 +30,13 @@ interface Order {
 }
 
 type Tab = "overview" | "products" | "orders" | "invoices";
-
 const DashboardPage = () => {
+  const { user, loading: authLoading } = useAuth();
+  
+  // Placeholders for removed mock data to prevent runtime crashes
+  const mockProducts: any[] = [];
+  const mockInvoices: any[] = [];
+  const mockActivities: any[] = [];
   const [tab, setTab] = useState<Tab>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -40,10 +46,9 @@ const DashboardPage = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-
+      setLoading(true);
+      
       const { data, error } = await supabase
         .from('orders')
         .select(`
@@ -65,8 +70,10 @@ const DashboardPage = () => {
       setLoading(false);
     };
 
-    fetchData();
-  }, []);
+    if (!authLoading) {
+      fetchData();
+    }
+  }, [user, authLoading]);
 
   const stats = {
     totalProducts: orders.length, // Rough estimate
@@ -203,6 +210,25 @@ const DashboardPage = () => {
       </div>
     </div>
   );
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 text-center">
+        <h2 className="text-xl font-bold mb-4">{t.appName}</h2>
+        <p className="text-muted-foreground mb-6">{lang === "ar" ? "الرجاء تسجيل الدخول للمتابعة" : "Please sign in to continue"}</p>
+        <Link to="/auth">
+          <Button>{t.login}</Button>
+        </Link>
+      </div>
+    );
+  }
 
   if (isMobile) {
     return (

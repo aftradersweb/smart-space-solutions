@@ -7,8 +7,11 @@ import { Warehouse, User, Building2, Eye, EyeOff, ArrowLeft, Globe } from "lucid
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect } from "react";
 
 const AuthPage = () => {
+  const { user, loading: authLoading } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [accountType, setAccountType] = useState<"individual" | "company">("individual");
   const [showPassword, setShowPassword] = useState(false);
@@ -16,6 +19,16 @@ const AuthPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t, lang, setLang, dir } = useLanguage();
+
+  useEffect(() => {
+    if (user && !authLoading) {
+      if (user.user_metadata?.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
+    }
+  }, [user, authLoading, navigate]);
 
   const [form, setForm] = useState({
     name: "", ownerName: "", commercialReg: "", phone: "",

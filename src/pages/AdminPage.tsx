@@ -18,6 +18,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useCurrency, currencies, type Currency } from "@/i18n/CurrencyContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import MobileTopBar from "@/components/MobileTopBar";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
@@ -71,6 +72,7 @@ type SpaceStoredItem = {
 };
 
 const AdminPage = () => {
+  const { user, profile, loading: authLoading, isAdmin } = useAuth();
   const [tab, setTab] = useState<Tab>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
@@ -92,6 +94,11 @@ const AdminPage = () => {
   });
 
   const [confirmAction, setConfirmAction] = useState<{orderId: string, type: 'approve' | 'reject'} | null>(null);
+  const [showPricingForm, setShowPricingForm] = useState(false);
+  const [editingPricing, setEditingPricing] = useState<any | null>(null);
+  const [pricingFormData, setPricingFormData] = useState({
+    price: "", minArea: "", minDuration: ""
+  });
   const [companyInfo, setCompanyInfo] = useState({
     name: "Smart Storage Hub",
     email: "info@smartstoragehub.com",
@@ -145,6 +152,15 @@ const AdminPage = () => {
     if (pData) setProfiles(pData as any);
     if (sData) setSpaces(sData as any);
     if (tData) setTypes(tData as any);
+
+    // Fetch Configurations
+    const { data: configData } = await supabase.from('configurations').select('*');
+    if (configData) {
+      const info = configData.find(c => c.key === 'company_info')?.value;
+      const social = configData.find(c => c.key === 'social_media')?.value;
+      if (info) setCompanyInfo(info);
+      if (social) setSocialMedia(social);
+    }
     
     setLoading(false);
   };
@@ -488,8 +504,16 @@ const AdminPage = () => {
     );
   };
 
-  const toggleSpaceActive = (id: string) => {
-    setSpaces(prev => prev.map(s => s.id === id ? { ...s, is_active: !s.is_active } : s));
+  const toggleSpaceActive = async (id: string, currentStatus: boolean) => {
+    const { error } = await supabase
+      .from('storage_spaces')
+      .update({ is_active: !currentStatus })
+      .eq('id', id);
+
+    if (!error) {
+      setSpaces(prev => prev.map(s => s.id === id ? { ...s, is_active: !currentStatus } : s));
+      toast({ title: t.settingsSaved });
+    }
   };
 
   const handleAddSpace = () => {
@@ -504,16 +528,68 @@ const AdminPage = () => {
     setShowSpaceForm(true);
   };
 
-  const handleSaveSpace = () => {
+  const handleSaveSpace = async () => {
     if (!spaceFormData.name) return;
+    
+    const spaceData = {
+      name_en: spaceFormData.name,
+      name_ar: spaceFormData.nameAr,
+      storage_type_id: spaceFormData.type,
+      capacity: parseInt(spaceFormData.capacity),
+    };
+
     if (editingSpace) {
-      setSpaces(prev => prev.map(s => s.id === editingSpace.id ? { ...s, name_en: spaceFormData.name, name_ar: spaceFormData.nameAr, storage_type_id: spaceFormData.type, capacity: parseInt(spaceFormData.capacity) } : s));
+      const { error } = await supabase
+        .from('storage_spaces')
+        .update(spaceData)
+        .eq('id', editingSpace.id);
+
+      if (!error) {
+        setSpaces(prev => prev.map(s => s.id === editingSpace.id ? { ...s, ...spaceData } : s));
+        toast({ title: t.settingsSaved });
+      }
     } else {
-      const newId = `S-${String(spaces.length + 1).padStart(2, "0")}`;
-      setSpaces(prev => [...prev, { id: newId, name_en: spaceFormData.name, name_ar: spaceFormData.nameAr, storage_type_id: spaceFormData.type, capacity: parseInt(spaceFormData.capacity), used_capacity: 0, status: 'available', is_active: true }]);
+      const { data, error } = await supabase
+        .from('storage_spaces')
+        .insert([{ ...spaceData, used_capacity: 0, status: 'available', is_active: true }])
+        .select()
+        .single();
+
+      if (!error && data) {
+        setSpaces(prev => [...prev, data as any]);
+        toast({ title: t.settingsSaved });
+      }
     }
     setShowSpaceForm(false);
-    toast({ title: t.settingsSaved });
+  };
+
+  const handleEditPricing = (p: any) => {
+    setEditingPricing(p);
+    setPricingFormData({
+      price: p.price_per_sqm.toString(),
+      minArea: p.min_area.toString(),
+      minDuration: p.min_duration_months.toString()
+    });
+    setShowPricingForm(true);
+  };
+
+  const handleSavePricing = async () => {
+    if (!editingPricing) return;
+    
+    const { error } = await supabase
+      .from('storage_types')
+      .update({
+        price_per_sqm_month: parseFloat(pricingFormData.price),
+        min_area: parseFloat(pricingFormData.minArea),
+        min_duration_months: parseInt(pricingFormData.minDuration)
+      })
+      .eq('id', editingPricing.id);
+
+    if (!error) {
+      setTypes(prev => prev.map(t => t.id === editingPricing.id ? { ...t, price_per_sqm_month: parseFloat(pricingFormData.price), min_area: parseFloat(pricingFormData.minArea), min_duration_months: parseInt(pricingFormData.minDuration) } : t));
+      toast({ title: t.settingsSaved });
+      setShowPricingForm(false);
+    }
   };
 
   // ─── Space Details View ───
@@ -601,6 +677,35 @@ const AdminPage = () => {
     );
   };
 
+  const PricingFormModal = () => {
+    if (!showPricingForm) return null;
+    return (
+      <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setShowPricingForm(false)}>
+        <div className="bg-card rounded-xl p-6 w-full max-w-md space-y-4 border border-border" onClick={e => e.stopPropagation()}>
+          <h3 className="font-bold text-foreground text-base">{t.adminEditPricingTitle || "Edit Pricing"}</h3>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{t.adminThPricePerSqm}</label>
+              <Input type="number" value={pricingFormData.price} onChange={e => setPricingFormData({ ...pricingFormData, price: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{t.adminThMinArea}</label>
+              <Input type="number" value={pricingFormData.minArea} onChange={e => setPricingFormData({ ...pricingFormData, minArea: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{t.adminThMinDuration}</label>
+              <Input type="number" value={pricingFormData.minDuration} onChange={e => setPricingFormData({ ...pricingFormData, minDuration: e.target.value })} />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={() => setShowPricingForm(false)}>{t.adminCancel}</Button>
+            <Button onClick={handleSavePricing}>{t.adminSave}</Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // ─── Spaces ───
   const SpacesContent = () => {
     if (selectedSpace) return <SpaceDetailsContent />;
@@ -634,7 +739,7 @@ const AdminPage = () => {
               </div>
               <div className="flex items-center justify-between pt-2 border-t border-border/50" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center gap-2">
-                  <Switch checked={s.is_active} onCheckedChange={() => toggleSpaceActive(s.id)} />
+                  <Switch checked={s.is_active} onCheckedChange={() => toggleSpaceActive(s.id, s.is_active)} />
                   <span className={`text-xs ${s.is_active ? "text-emerald-400" : "text-muted-foreground"}`}>
                     {s.is_active ? t.adminSpaceActive : t.adminSpaceInactive}
                   </span>
@@ -652,6 +757,7 @@ const AdminPage = () => {
           ))}
         </div>
         <SpaceFormModal />
+        <PricingFormModal />
       </div>
     );
   };
@@ -679,7 +785,7 @@ const AdminPage = () => {
                 <div><span className="text-muted-foreground">{t.adminThMinArea}</span><p className="text-foreground mt-0.5">{p.min_area} {t.adminSqm}</p></div>
                 <div><span className="text-muted-foreground">{t.adminThMinDuration}</span><p className="text-foreground mt-0.5">{p.min_duration_months} {t.adminMonth}</p></div>
               </div>
-              <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 text-xs w-full">{t.adminEdit}</Button>
+              <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 text-xs w-full" onClick={() => handleEditPricing(p)}>{t.adminEdit}</Button>
             </div>
           ))}
         </div>
@@ -704,7 +810,7 @@ const AdminPage = () => {
                   <td className="p-4 text-primary font-bold text-sm">{formatPrice(p.price_per_sqm)}</td>
                   <td className="p-4 text-muted-foreground text-sm">{p.min_area} {t.adminSqm}</td>
                   <td className="p-4 text-muted-foreground text-sm">{p.min_duration_months} {t.adminMonth}</td>
-                  <td className="p-4"><Button variant="ghost" size="sm" className="text-primary hover:text-primary/80">{t.adminEdit}</Button></td>
+                  <td className="p-4"><Button variant="ghost" size="sm" className="text-primary hover:text-primary/80" onClick={() => handleEditPricing(p)}>{t.adminEdit}</Button></td>
                 </tr>
               ))}
             </tbody>
@@ -846,8 +952,20 @@ const AdminPage = () => {
 
   // ─── Settings ───
   const SettingsContent = () => {
-    const handleSave = () => {
-      toast({ title: t.settingsSaved });
+    const handleSave = async () => {
+      const { error: infoErr } = await supabase
+        .from('configurations')
+        .update({ value: companyInfo, updated_at: new Date() })
+        .eq('key', 'company_info');
+
+      const { error: socialErr } = await supabase
+        .from('configurations')
+        .update({ value: socialMedia, updated_at: new Date() })
+        .eq('key', 'social_media');
+
+      if (!infoErr && !socialErr) {
+        toast({ title: t.settingsSaved });
+      }
     };
 
     const socialFields = [
@@ -970,6 +1088,26 @@ const AdminPage = () => {
       </div>
     );
   };
+
+  // ─── Loading & Auth Access Control ───
+  if (authLoading || loading) {
+    return <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Clock className="w-8 h-8 text-primary animate-spin" />
+    </div>;
+  }
+
+  if (!user || !isAdmin) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 text-center">
+        <XCircle className="w-16 h-16 text-destructive mb-4" />
+        <h2 className="text-2xl font-bold text-foreground mb-2">{lang === "ar" ? "وصول مرفوض" : "Access Denied"}</h2>
+        <p className="text-muted-foreground mb-6">{lang === "ar" ? "ليس لديك صلاحيات للوصول إلى هذه الصفحة." : "You do not have the necessary permissions to access this page."}</p>
+        <Link to="/auth">
+          <Button>{t.adminLogout}</Button>
+        </Link>
+      </div>
+    );
+  }
 
   // ─── Mobile Layout ───
   if (isMobile) {

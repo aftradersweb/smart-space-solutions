@@ -1,0 +1,39 @@
+EXPLANATION OF GITHUB AUTHENTICATION ERROR (USER: talalkhomri)
+============================================================
+
+1. THE SOURCE OF THE NAME
+-------------------------
+The name 'talalkhomri' was not found in your source code, environment variables, or your local Git configuration. It was identified by GitHub's servers during an authentication handshake.
+
+When I ran the following command in the terminal:
+    git push origin main
+
+The following response was received from GitHub:
+    remote: Permission to aftradersweb/smart-space-solutions.git denied to talalkhomri.
+    fatal: unable to access 'https://github.com/aftradersweb/smart-space-solutions.git/': The requested URL returned error: 403
+
+2. AUTHORSHIP VS. AUTHENTICATION
+--------------------------------
+There is a common confusion between two different Git settings:
+
+A. Authorship (Local Config):
+   When you run `git config user.name "Hafez"`, you are telling Git what name to put on the 'stamp' of the commit. This is just text and does not provide security or access.
+
+B. Authentication (The Key/Token):
+   When you try to 'Push' to a server like GitHub, GitHub ignores your local name and looks at the 'Security Key' or 'Token' stored in the system's Credential Manager or SSH agent.
+
+3. WHY IT SAYS 'talalkhomri'
+----------------------------
+In this specific cloud-based development environment, the underlying system has a GitHub access token or SSH key already configured. That token belongs to a GitHub account named 'talalkhomri'.
+
+- Even though we are working on your files (Hafez), the 'Courier' delivering the files to GitHub is 'talalkhomri'.
+- GitHub checks the 'Courier's' permissions.
+- Since 'talalkhomri' is not listed as a contributor with write access to the 'aftradersweb/smart-space-solutions' repository, GitHub rejects the delivery with a 403 Forbidden error.
+
+4. HOW TO RESOLVE
+-----------------
+To allow me to push successfully, you have three options:
+
+1. Add 'talalkhomri' as a Collaborator with 'Write' access in your GitHub repository settings.
+2. Provide a Personal Access Token (PAT) from your own account, which I can use to override the default environment credentials.
+3. Sync the files manually using your own local computer, which is already linked to your personal GitHub account.

@@ -17,12 +17,15 @@ import AdminPage from "./pages/AdminPage.tsx";
 import NewRequestPage from "./pages/NewRequestPage.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
+import { AuthProvider } from "./contexts/AuthContext";
+
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
     <CurrencyProvider>
+    <AuthProvider>
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -44,6 +47,7 @@ const App = () => (
         <PWAInstallPrompt />
       </BrowserRouter>
     </TooltipProvider>
+    </AuthProvider>
     </CurrencyProvider>
     </LanguageProvider>
   </QueryClientProvider>

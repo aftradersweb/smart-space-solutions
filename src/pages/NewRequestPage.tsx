@@ -6,8 +6,9 @@ import { Label } from "@/components/ui/label";
 import {
   Warehouse, ArrowLeft, ArrowRight, Check, Upload, X, Image as ImageIcon,
   Package, Settings2, Truck, FileText, Camera,
-  Snowflake, ShieldCheck, AlertTriangle, Shield, MapPin, Globe
+  Snowflake, ShieldCheck, AlertTriangle, Shield, MapPin, Globe, Car
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { supabase } from "@/lib/supabase";
@@ -54,6 +55,7 @@ const initialForm: FormData = {
 };
 
 const NewRequestPage = () => {
+  const { user, loading: authLoading } = useAuth();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<FormData>(initialForm);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -142,7 +144,6 @@ const NewRequestPage = () => {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast.error("Please login to submit a request");
         navigate("/auth");
@@ -194,6 +195,26 @@ const NewRequestPage = () => {
   };
 
   const isRtl = dir === "rtl";
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 text-center">
+        <h2 className="text-xl font-bold mb-4">{t.appName}</h2>
+        <p className="text-muted-foreground mb-6">{lang === "ar" ? "الرجاء تسجيل الدخول للمتابعة" : "Please sign in to continue"}</p>
+        <Link to="/auth">
+          <Button>{t.login}</Button>
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background" dir={dir}>
@@ -598,13 +619,9 @@ const Step5 = ({ form, storageInfo, storagePrice, extrasPrice, total, t, extraSe
             </div>
           )}
         </div>
-        <div className="border-t border-primary/20 pt-4 flex justify-between items-center">
-          <span className="text-lg font-bold text-foreground">{t.nrTotal}</span>
-          <span className="text-2xl font-black text-gradient-gold">{total.toLocaleString()} {t.nrSar}</span>
-        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default NewRequestPage;
