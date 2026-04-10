@@ -374,10 +374,10 @@ const AdminPage = () => {
           {/* Actions for pending orders */}
           {selectedOrderData.status === t.adminUnderReview && (
             <div className="flex gap-3">
-              <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setConfirmAction({ type: "approve", orderId: selectedOrderData.id })}>
                 <CheckCircle className="w-4 h-4" /> {t.adminApproved}
               </Button>
-              <Button variant="destructive" className="gap-2">
+              <Button variant="destructive" className="gap-2" onClick={() => setConfirmAction({ type: "reject", orderId: selectedOrderData.id })}>
                 <XCircle className="w-4 h-4" /> {t.adminRejected}
               </Button>
             </div>
@@ -1073,6 +1073,28 @@ const AdminPage = () => {
           {tab === "users" && <UsersContent />}
           {tab === "settings" && <SettingsContent />}
         </main>
+        {/* Confirmation Dialog */}
+        {confirmAction && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmAction(null)}>
+            <div className="bg-card rounded-xl p-6 w-full max-w-sm space-y-4 border border-border" onClick={e => e.stopPropagation()}>
+              <h3 className="font-bold text-foreground text-base">{t.adminConfirmTitle}</h3>
+              <p className="text-sm text-muted-foreground">
+                {confirmAction.type === "approve" ? t.adminConfirmApprove : t.adminConfirmReject}
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" size="sm" onClick={() => setConfirmAction(null)}>{t.adminCancel}</Button>
+                <Button
+                  size="sm"
+                  className={confirmAction.type === "approve" ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}
+                  variant={confirmAction.type === "reject" ? "destructive" : "default"}
+                  onClick={() => handleOrderStatusChange(confirmAction.orderId, confirmAction.type)}
+                >
+                  {t.adminConfirm}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
