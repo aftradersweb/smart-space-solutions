@@ -173,6 +173,10 @@ const NewRequestPage = () => {
         .insert({
           user_id: user.id,
           storage_type_id: form.storageType,
+          product_name: form.productName,
+          product_type: form.productType,
+          quantity: form.quantity,
+          weight: form.weight,
           area: form.area,
           duration_months: form.duration,
           total_price: total,
@@ -194,9 +198,7 @@ const NewRequestPage = () => {
     }
   };
 
-  const isRtl = dir === "rtl";
-
-  if (authLoading) {
+    if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
@@ -479,7 +481,7 @@ const Step3 = ({ form, toggleExtra, update, t, extraServices }: {
     {form.extras.includes("delivery") && (
       <div>
         <Label className="text-foreground mb-2 block">
-          <MapPin className="w-4 h-4 inline me-1" />
+          <Truck className="w-4 h-4 inline me-1" />
           {t.nrDeliveryAddress}
         </Label>
         <Input value={form.deliveryAddress} onChange={(e) => update("deliveryAddress", e.target.value)}
@@ -535,14 +537,15 @@ const Step4 = ({ images, addImages, removeImage, fileInputRef, t }: {
 );
 
 /* ── Step 5: Summary ── */
-const Step5 = ({ form, storageInfo, storagePrice, extrasPrice, total, t, extraServices }: {
+const Step5 = ({ form, storageInfo, storagePrice, extrasPrice, total, t, extraServices, lang }: {
   form: FormData;
-  storageInfo: { id: string; name: string; icon: any; price: number; desc: string };
+  storageInfo: any;
   storagePrice: number;
   extrasPrice: number;
   total: number;
   t: T;
   extraServices: { id: string; name: string; price: number }[];
+  lang: string;
 }) => (
   <div className="space-y-6">
     <h2 className="text-xl font-bold text-foreground mb-2">{t.nrReview}</h2>
@@ -618,10 +621,14 @@ const Step5 = ({ form, storageInfo, storagePrice, extrasPrice, total, t, extraSe
               <span className="text-foreground font-bold">{extrasPrice.toLocaleString()} {t.nrSar}</span>
             </div>
           )}
+          <div className="pt-2 border-t border-primary/20 flex justify-between text-base">
+            <span className="text-foreground font-bold">{t.nrTotal}</span>
+            <span className="text-primary font-black">{total.toLocaleString()} {t.nrSar}</span>
+          </div>
         </div>
       </div>
     </div>
-  );
-};
+  </div>
+);
 
 export default NewRequestPage;

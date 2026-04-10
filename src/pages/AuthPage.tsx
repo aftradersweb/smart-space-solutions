@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEffect } from "react";
 
 const AuthPage = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading, isAdmin } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [accountType, setAccountType] = useState<"individual" | "company">("individual");
   const [showPassword, setShowPassword] = useState(false);
@@ -21,14 +21,14 @@ const AuthPage = () => {
   const { t, lang, setLang, dir } = useLanguage();
 
   useEffect(() => {
-    if (user && !authLoading) {
-      if (user.user_metadata?.role === 'admin') {
+    if (user && !authLoading && profile) {
+      if (isAdmin) {
         navigate('/admin');
       } else {
         navigate('/dashboard');
       }
     }
-  }, [user, authLoading, navigate]);
+  }, [user, profile, authLoading, isAdmin, navigate]);
 
   const [form, setForm] = useState({
     name: "", ownerName: "", commercialReg: "", phone: "",
@@ -44,9 +44,10 @@ const AuthPage = () => {
   };
 
   const validatePassword = (pw: string) => {
-    if (pw.length < 8) return t.errPasswordMin;
-    if (!/[a-zA-Z]/.test(pw)) return t.errPasswordLetters;
-    if (!/[0-9]/.test(pw)) return t.errPasswordNumbers;
+    if (pw.length < 8) return t.errPasswordMin || "Password must be at least 8 characters";
+    if (!/[a-zA-Z]/.test(pw)) return t.errPasswordLetters || "Include at least one letter";
+    if (!/[0-9]/.test(pw)) return t.errPasswordNumbers || "Include at least one number";
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(pw)) return "Include at least one special character (!@#$%^&*)";
     return "";
   };
 
@@ -87,14 +88,54 @@ const AuthPage = () => {
     setLoading(true);
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        // 1. Check for lockout
+        const { data: profile, error: profileErr } = await supabase
+          .from('profiles')
+          .select('lockout_until')
+          .eq('email', form.email) // Need to ensure email is in profiles or use RPC
+          .single();
+
+        // Actually, cleaner to use an RPC for the whole check
+        const { data: lockoutTime, error: checkErr } = await supabase
+          .rpc('check_lockout', { user_email: form.email });
+        
+        if (lockoutTime) {
+          const waitTime = Math.ceil((new Date(lockoutTime).getTime() - Date.now()) / 60000);
+          if (waitTime > 0) {
+            throw new Error(lang === 'ar' ? `الحساب مغلق مؤقتاً. حاول بعد ${waitTime} دقيقة` : `Account locked. Try again in ${waitTime} minutes.`);
+          }
+        }
+
+        const { data: authData, error } = await supabase.auth.signInWithPassword({
           email: form.email,
           password: form.password,
         });
-        if (error) throw error;
+
+        if (error) {
+          // Increment failed attempt
+          await supabase.rpc('increment_failed_login', { user_email: form.email });
+          throw error;
+        }
+
+        // Reset failed attempts on success
+        if (authData.user) {
+          await supabase.rpc('reset_failed_login', { user_id: authData.user.id });
+        }
+
         toast({ title: t.loginSuccess || "Logged in successfully" });
-        navigate("/dashboard");
+        // Redirection will be handled by the useEffect once profile loads
       } else {
+        // Check if phone already exists
+        const { data: existingPhone } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('phone', form.phone)
+          .maybeSingle();
+        
+        if (existingPhone) {
+          throw new Error(lang === 'ar' ? 'رقم الهاتف مسجل مسبقاً' : 'Phone number already registered');
+        }
+
         const { data, error } = await supabase.auth.signUp({
           email: form.email,
           password: form.password,
@@ -102,35 +143,18 @@ const AuthPage = () => {
             data: {
               full_name: form.name,
               user_type: accountType,
+              phone: form.phone,
+              nationality: form.nationality,
+              gender: form.gender,
+              commercial_reg: form.commercialReg,
+              id_number: form.idNumber,
+              owner_name: form.ownerName,
             }
           }
         });
         if (error) throw error;
 
-        if (data.user) {
-          // Create profile
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .insert({
-              id: data.user.id,
-              full_name: form.name,
-              phone: form.phone,
-              user_type: accountType,
-              company_name: accountType === 'company' ? form.name : null,
-              commercial_reg: accountType === 'company' ? form.commercialReg : null,
-              nationality: form.nationality,
-              gender: form.gender,
-              metadata: {
-                id_number: form.idNumber,
-                owner_name: form.ownerName,
-              }
-            });
-          
-          if (profileError) {
-            console.error("Profile creation error:", profileError);
-          }
-        }
-
+        // Note: Profile is now created via database trigger
         toast({ 
           title: t.signupSuccess || "Account created successfully",
           description: t.verifyEmailMsg || "Please check your email to verify your account" 

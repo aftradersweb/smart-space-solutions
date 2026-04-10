@@ -535,6 +535,8 @@ const ar = {
   footerFAQ: "الأسئلة الشائعة",
   footerFollowUs: "تابعنا",
   footerLinks: "روابط سريعة",
+  unknownClient: "عميل غير معروف",
+  noProducts: "لا توجد منتجات",
 };
 
 export default ar;

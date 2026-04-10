@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import {
   Warehouse, LayoutDashboard, ClipboardList, MapPin as Space, DollarSign,
@@ -30,15 +30,17 @@ interface AdminOrder {
   duration_months: number;
   total_price: number;
   notes: string;
+  storage_type_id: string;
+  user_id: string;
   profiles: {
     full_name: string;
     company_name: string;
     user_type: string;
-  };
+  } | null;
   storage_types: {
     name_en: string;
     name_ar: string;
-  };
+  } | null;
 }
 
 interface AdminProfile {
@@ -72,7 +74,15 @@ type SpaceStoredItem = {
 };
 
 const AdminPage = () => {
-  const { user, profile, loading: authLoading, isAdmin } = useAuth();
+  const { user, profile, loading: authLoading, isAdmin, signOut } = useAuth();
+
+  // ── Context hooks must come BEFORE any useState that uses their values ──
+  const { t, lang, setLang, dir } = useLanguage();
+  const isMobile = useIsMobile();
+  const { currency, setCurrency, currencySymbol, formatPrice } = useCurrency();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
   const [tab, setTab] = useState<Tab>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
@@ -103,17 +113,12 @@ const AdminPage = () => {
     name: "Smart Storage Hub",
     email: "info@smartstoragehub.com",
     phone: "+966 50 123 4567",
-    address: lang === "ar" ? "الرياض، المملكة العربية السعودية" : "Riyadh, Saudi Arabia",
+    address: "Riyadh, Saudi Arabia",
     description: "",
   });
   const [socialMedia, setSocialMedia] = useState({
     twitter: "", instagram: "", facebook: "", linkedin: "", whatsapp: "", snapchat: "", tiktok: "",
   });
-
-  const { t, lang, setLang, dir } = useLanguage();
-  const isMobile = useIsMobile();
-  const { currency, setCurrency, currencySymbol, formatPrice } = useCurrency();
-  const { toast } = useToast();
 
   useEffect(() => {
     fetchData();
@@ -206,10 +211,10 @@ const AdminPage = () => {
 
   // Dashboard stats derived from live data
   const stats = [
-    { label: t.adminTotalOrders, value: orders.length.toString(), icon: ClipboardList, color: "text-blue-400", change: "+0%" },
-    { label: t.adminPendingOrders, value: orders.filter(o => o.status === 'under_review').length.toString(), icon: Clock, color: "text-amber-400", change: "-0" },
-    { label: t.adminTotalRevenue, value: formatPrice(orders.reduce((sum, o) => sum + o.total_price, 0)), icon: TrendingUp, color: "text-emerald-400", change: "+0%" },
-    { label: t.adminActiveClients, value: profiles.length.toString(), icon: Users, color: "text-purple-400", change: "+0" },
+    { label: t.adminTotalOrders, value: (orders || []).length.toString(), icon: ClipboardList, color: "text-blue-400", change: "+0%" },
+    { label: t.adminPendingOrders, value: (orders || []).filter(o => o.status === 'under_review').length.toString(), icon: Clock, color: "text-amber-400", change: "-0" },
+    { label: t.adminTotalRevenue, value: formatPrice((orders || []).reduce((sum, o) => sum + (o.total_price || 0), 0)), icon: TrendingUp, color: "text-emerald-400", change: "+0%" },
+    { label: t.adminActiveClients, value: (profiles || []).length.toString(), icon: Users, color: "text-purple-400", change: "+0" },
   ];
 
   // ─── Export helpers ───
@@ -325,14 +330,14 @@ const AdminPage = () => {
         <div className="glass rounded-xl p-4 md:p-6">
           <h3 className="font-bold text-foreground text-sm md:text-base mb-3 md:mb-4">{t.adminLatestOrders}</h3>
           <div className="space-y-2 md:space-y-3">
-            {orders.slice(0, 3).map((o) => (
+            {(orders || []).slice(0, 3).map((o) => (
               <div key={o.id} className="flex items-center justify-between p-2.5 md:p-3 rounded-lg bg-muted/20 cursor-pointer" onClick={() => { setSelectedOrder(o.id); setTab("orders"); }}>
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-foreground text-xs md:text-sm">{o.id.split('-')[0].toUpperCase()}</span>
-                    <span className="text-[10px] md:text-xs text-muted-foreground">- {o.profiles.company_name || o.profiles.full_name}</span>
+                    <span className="text-[10px] md:text-xs text-muted-foreground">- {o.profiles?.company_name || o.profiles?.full_name || t.unknownClient}</span>
                   </div>
-                  <span className="text-[10px] md:text-xs text-muted-foreground">{lang === 'ar' ? o.storage_types.name_ar : o.storage_types.name_en} | {formatPrice(o.total_price)}</span>
+                  <span className="text-[10px] md:text-xs text-muted-foreground">{lang === 'ar' ? o.storage_types?.name_ar : o.storage_types?.name_en} | {formatPrice(o.total_price)}</span>
                 </div>
                 <Badge className={`${statusColor(o.status)} border-none text-[10px] md:text-xs`}>{o.status.replace('_', ' ')}</Badge>
               </div>
@@ -393,9 +398,9 @@ const AdminPage = () => {
             </h3>
             <div className={`grid ${isMobile ? "grid-cols-1 gap-3" : "grid-cols-2 lg:grid-cols-3 gap-4"}`}>
               <div><span className="text-xs text-muted-foreground">{t.adminThOrderId}</span><p className="text-sm font-mono font-medium text-primary mt-1">{selectedOrderData.id.split('-')[0].toUpperCase()}</p></div>
-              <div><span className="text-xs text-muted-foreground">{t.adminOrderClient}</span><p className="text-sm font-medium text-foreground mt-1">{selectedOrderData.profiles.company_name || selectedOrderData.profiles.full_name}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminOrderClient}</span><p className="text-sm font-medium text-foreground mt-1">{selectedOrderData.profiles?.company_name || selectedOrderData.profiles?.full_name || t.unknownClient}</p></div>
               <div><span className="text-xs text-muted-foreground">{t.adminOrderDate}</span><p className="text-sm font-medium text-foreground mt-1">{new Date(selectedOrderData.created_at).toLocaleDateString()}</p></div>
-              <div><span className="text-xs text-muted-foreground">{t.adminOrderStorageType}</span><p className="text-sm font-medium text-foreground mt-1">{lang === 'ar' ? selectedOrderData.storage_types.name_ar : selectedOrderData.storage_types.name_en}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminOrderStorageType}</span><p className="text-sm font-medium text-foreground mt-1">{lang === 'ar' ? selectedOrderData.storage_types?.name_ar : selectedOrderData.storage_types?.name_en}</p></div>
               <div><span className="text-xs text-muted-foreground">{t.adminOrderArea}</span><p className="text-sm font-medium text-foreground mt-1">{selectedOrderData.area} {t.sqm}</p></div>
               <div><span className="text-xs text-muted-foreground">{t.adminOrderDuration}</span><p className="text-sm font-medium text-foreground mt-1">{selectedOrderData.duration_months} {t.nrMonth}</p></div>
               <div><span className="text-xs text-muted-foreground">{t.adminOrderTotal}</span><p className="text-sm font-bold text-emerald-400 mt-1">{formatPrice(selectedOrderData.total_price)}</p></div>
@@ -448,7 +453,7 @@ const AdminPage = () => {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-foreground">{t.adminManageOrders}</h2>
-            <ExportButtons />
+            {ExportButtons()}
           </div>
           {orders.map((o) => (
             <div key={o.id} className="glass rounded-xl p-4 space-y-2 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setSelectedOrder(o.id)}>
@@ -457,8 +462,8 @@ const AdminPage = () => {
                 <Badge className={`${statusColor(o.status)} border-none text-[10px]`}>{o.status.replace('_', ' ')}</Badge>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div><span className="text-muted-foreground">{t.adminThClient}</span><p className="text-foreground mt-0.5">{o.profiles.company_name || o.profiles.full_name}</p></div>
-                <div><span className="text-muted-foreground">{t.adminThType}</span><p className="text-foreground mt-0.5">{lang === 'ar' ? o.storage_types.name_ar : o.storage_types.name_en}</p></div>
+                <div><span className="text-muted-foreground">{t.adminThClient}</span><p className="text-foreground mt-0.5">{o.profiles?.company_name || o.profiles?.full_name || t.unknownClient}</p></div>
+                <div><span className="text-muted-foreground">{t.adminThType}</span><p className="text-foreground mt-0.5">{lang === 'ar' ? o.storage_types?.name_ar : o.storage_types?.name_en}</p></div>
                 <div><span className="text-muted-foreground">{t.adminThArea}</span><p className="text-foreground mt-0.5">{o.area} {t.sqm}</p></div>
                 <div><span className="text-muted-foreground">{t.adminThDuration}</span><p className="text-foreground mt-0.5">{o.duration_months} {t.nrMonth}</p></div>
               </div>
@@ -474,7 +479,7 @@ const AdminPage = () => {
       <div>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-foreground">{t.adminManageOrders}</h2>
-          <ExportButtons />
+          {ExportButtons()}
         </div>
         <div className="glass rounded-xl overflow-hidden">
           <table className="w-full">
@@ -489,8 +494,8 @@ const AdminPage = () => {
               {orders.map((o) => (
                 <tr key={o.id} className="border-b border-border/50 hover:bg-muted/10 cursor-pointer transition-colors" onClick={() => setSelectedOrder(o.id)}>
                   <td className="p-4 font-medium text-primary text-sm">{o.id.split('-')[0].toUpperCase()}</td>
-                  <td className="p-4 text-foreground text-sm">{o.profiles.company_name || o.profiles.full_name}</td>
-                  <td className="p-4 text-muted-foreground text-sm">{lang === 'ar' ? o.storage_types.name_ar : o.storage_types.name_en}</td>
+                  <td className="p-4 text-foreground text-sm">{o.profiles?.company_name || o.profiles?.full_name || t.unknownClient}</td>
+                  <td className="p-4 text-muted-foreground text-sm">{lang === 'ar' ? o.storage_types?.name_ar : o.storage_types?.name_en}</td>
                   <td className="p-4 text-muted-foreground text-sm">{o.area} {t.sqm}</td>
                   <td className="p-4 text-muted-foreground text-sm">{o.duration_months} {t.nrMonth}</td>
                   <td className="p-4 text-foreground font-bold text-sm">{formatPrice(o.total_price)}</td>
@@ -634,6 +639,75 @@ const AdminPage = () => {
             />
           </div>
         </div>
+
+        {/* Related Orders */}
+        {(() => {
+          const relatedOrders = orders.filter(o => o.storage_type_id === space.storage_type_id);
+          return (
+            <div className="glass rounded-xl p-4 md:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-foreground text-sm md:text-base flex items-center gap-2">
+                  <ClipboardList className="w-4 h-4 text-primary" />
+                  {lang === "ar" ? "الطلبات المرتبطة" : "Related Orders"}
+                  <span className="ml-1 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">{relatedOrders.length}</span>
+                </h3>
+              </div>
+
+              {relatedOrders.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">{lang === "ar" ? "لا توجد طلبات لهذا النوع من المساحات بعد" : "No orders for this space type yet"}</p>
+              ) : isMobile ? (
+                <div className="space-y-3">
+                  {relatedOrders.map(o => (
+                    <div key={o.id}
+                      className="bg-muted/20 rounded-lg p-3 space-y-2 cursor-pointer hover:bg-muted/30 transition-colors"
+                      onClick={() => { setSelectedOrder(o.id); setTab("orders"); setSelectedSpace(null); }}>
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs font-bold text-primary">{o.id.split('-')[0].toUpperCase()}</span>
+                        <Badge className={`${statusColor(o.status)} border-none text-[10px]`}>{o.status.replace('_', ' ')}</Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div><span className="text-muted-foreground">{t.adminOrderClient}</span><p className="text-foreground mt-0.5 truncate">{o.profiles?.company_name || o.profiles?.full_name || t.unknownClient}</p></div>
+                        <div><span className="text-muted-foreground">{t.adminThArea}</span><p className="text-foreground mt-0.5">{o.area} {t.sqm}</p></div>
+                        <div><span className="text-muted-foreground">{t.adminThDuration}</span><p className="text-foreground mt-0.5">{o.duration_months} {t.adminMonth}</p></div>
+                        <div><span className="text-muted-foreground">{t.adminThTotal}</span><p className="text-foreground font-bold mt-0.5">{formatPrice(o.total_price)}</p></div>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">{t.thDate}: {new Date(o.created_at).toLocaleDateString()}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-lg border border-border/50">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/10">
+                        {[t.adminThOrderId, t.adminOrderClient, t.adminThArea, t.adminThDuration, t.adminThTotal, t.adminThStatus, t.thDate].map(h => (
+                          <th key={h} className={`${textAlign} p-3 text-xs font-semibold text-muted-foreground`}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {relatedOrders.map(o => (
+                        <tr key={o.id}
+                          className="border-b border-border/30 hover:bg-muted/10 cursor-pointer transition-colors"
+                          onClick={() => { setSelectedOrder(o.id); setTab("orders"); setSelectedSpace(null); }}>
+                          <td className="p-3 font-mono text-xs font-bold text-primary">{o.id.split('-')[0].toUpperCase()}</td>
+                          <td className="p-3 text-sm text-foreground">{o.profiles?.company_name || o.profiles?.full_name || t.unknownClient}</td>
+                          <td className="p-3 text-sm text-muted-foreground">{o.area} {t.sqm}</td>
+                          <td className="p-3 text-sm text-muted-foreground">{o.duration_months} {t.adminMonth}</td>
+                          <td className="p-3 text-sm font-bold text-foreground">{formatPrice(o.total_price)}</td>
+                          <td className="p-3">
+                            <Badge className={`${statusColor(o.status)} border-none text-xs`}>{o.status.replace('_', ' ')}</Badge>
+                          </td>
+                          <td className="p-3 text-sm text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
     );
   };
@@ -708,7 +782,7 @@ const AdminPage = () => {
 
   // ─── Spaces ───
   const SpacesContent = () => {
-    if (selectedSpace) return <SpaceDetailsContent />;
+    if (selectedSpace) return SpaceDetailsContent();
 
     return (
       <div>
@@ -756,8 +830,8 @@ const AdminPage = () => {
             </div>
           ))}
         </div>
-        <SpaceFormModal />
-        <PricingFormModal />
+        {SpaceFormModal()}
+        {PricingFormModal()}
       </div>
     );
   };
@@ -860,7 +934,7 @@ const AdminPage = () => {
                       <Badge className={`${statusColor(o.status)} border-none text-[10px]`}>{o.status.replace('_', ' ')}</Badge>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div><span className="text-muted-foreground">{t.adminThType}</span><p className="text-foreground mt-0.5">{lang === 'ar' ? o.storage_types.name_ar : o.storage_types.name_en}</p></div>
+                      <div><span className="text-muted-foreground">{t.adminThType}</span><p className="text-foreground mt-0.5">{lang === 'ar' ? o.storage_types?.name_ar : o.storage_types?.name_en}</p></div>
                       <div><span className="text-muted-foreground">{t.adminThArea}</span><p className="text-foreground mt-0.5">{o.area} {t.sqm}</p></div>
                       <div><span className="text-muted-foreground">{t.adminThDuration}</span><p className="text-foreground mt-0.5">{o.duration_months} {t.nrMonth}</p></div>
                       <div><span className="text-muted-foreground">{t.adminThTotal}</span><p className="text-foreground mt-0.5">{formatPrice(o.total_price)}</p></div>
@@ -883,7 +957,7 @@ const AdminPage = () => {
                     {orders.filter(o => o.user_id === selectedUser).map(o => (
                       <tr key={o.id} className="border-b border-border/30 hover:bg-muted/10">
                         <td className="p-3 font-mono text-xs text-primary">{o.id.split('-')[0].toUpperCase()}</td>
-                        <td className="p-3 text-sm text-foreground">{lang === 'ar' ? o.storage_types.name_ar : o.storage_types.name_en}</td>
+                        <td className="p-3 text-sm text-foreground">{lang === 'ar' ? o.storage_types?.name_ar : o.storage_types?.name_en}</td>
                         <td className="p-3 text-sm text-muted-foreground">{o.area} {t.sqm}</td>
                         <td className="p-3 text-sm text-muted-foreground">{o.duration_months} {t.nrMonth}</td>
                         <td className="p-3 text-sm font-medium text-foreground">{formatPrice(o.total_price)}</td>
@@ -1156,10 +1230,16 @@ const AdminPage = () => {
           ))}
         </nav>
         <div className="p-3 border-t border-border">
-          <Link to="/" className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/30">
+          <button 
+            onClick={async () => {
+              await signOut();
+              navigate("/");
+            }} 
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/30"
+          >
             <LogOut className="w-5 h-5 shrink-0" />
             {sidebarOpen && <span>{t.adminLogout}</span>}
-          </Link>
+          </button>
         </div>
       </aside>
 
@@ -1192,12 +1272,12 @@ const AdminPage = () => {
         </header>
 
         <main className="flex-1 p-6 overflow-auto">
-          {tab === "overview" && <OverviewContent />}
-          {tab === "orders" && <OrdersContent />}
-          {tab === "spaces" && <SpacesContent />}
-          {tab === "pricing" && <PricingContent />}
-          {tab === "users" && <UsersContent />}
-          {tab === "settings" && <SettingsContent />}
+          {tab === "overview" && OverviewContent()}
+          {tab === "orders" && OrdersContent()}
+          {tab === "spaces" && SpacesContent()}
+          {tab === "pricing" && PricingContent()}
+          {tab === "users" && UsersContent()}
+          {tab === "settings" && SettingsContent()}
         </main>
         {/* Confirmation Dialog */}
         {confirmAction && (

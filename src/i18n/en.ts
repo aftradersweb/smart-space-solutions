@@ -535,6 +535,8 @@ const en = {
   footerFAQ: "FAQ",
   footerFollowUs: "Follow Us",
   footerLinks: "Quick Links",
+  unknownClient: "Unknown Client",
+  noProducts: "No products found",
 };
 
 export default en;

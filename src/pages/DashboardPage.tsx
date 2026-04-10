@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Warehouse, LayoutDashboard, Package, FileText, CreditCard,
   Plus, Search, Bell, User, LogOut, ClipboardList, Settings,
@@ -23,33 +23,44 @@ interface Order {
   area: number;
   duration_months: number;
   total_price: number;
+  product_name: string;
+  product_type: string;
+  quantity: number;
+  weight: string;
   storage_types: {
     name_en: string;
     name_ar: string;
   };
 }
 
+interface Invoice {
+  id: string;
+  order_id: string;
+  amount: number;
+  status: string;
+  created_at: string;
+}
+
 type Tab = "overview" | "products" | "orders" | "invoices";
 const DashboardPage = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   
-  // Placeholders for removed mock data to prevent runtime crashes
-  const mockProducts: any[] = [];
-  const mockInvoices: any[] = [];
-  const mockActivities: any[] = [];
   const [tab, setTab] = useState<Tab>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const { t, lang, setLang, dir } = useLanguage();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
       setLoading(true);
       
-      const { data, error } = await supabase
+      // Fetch orders
+      const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select(`
           id,
@@ -58,6 +69,10 @@ const DashboardPage = () => {
           area,
           duration_months,
           total_price,
+          product_name,
+          product_type,
+          quantity,
+          weight,
           storage_types (
             name_en,
             name_ar
@@ -66,7 +81,17 @@ const DashboardPage = () => {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (data) setOrders(data as any);
+      if (ordersData) setOrders(ordersData as any);
+
+      // Fetch invoices
+      const { data: invoicesData, error: invoicesError } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      
+      if (invoicesData) setInvoices(invoicesData);
+
       setLoading(false);
     };
 
@@ -76,10 +101,10 @@ const DashboardPage = () => {
   }, [user, authLoading]);
 
   const stats = {
-    totalProducts: orders.length, // Rough estimate
-    activeOrders: orders.filter(o => o.status === 'approved' || o.status === 'active').length,
-    usedSpace: orders.reduce((sum, o) => sum + o.area, 0),
-    totalPayments: orders.reduce((sum, o) => sum + o.total_price, 0),
+    totalProducts: orders.length,
+    activeOrders: orders.filter(o => o.status === 'approved' || o.status === 'active' || o.status === 'stored').length,
+    usedSpace: orders.reduce((sum, o) => sum + (o.area || 0), 0),
+    totalPayments: invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0),
   };
 
   const statusColor = (s: string) => {
@@ -140,7 +165,7 @@ const DashboardPage = () => {
           </div>
           <div>
             <span className="text-muted-foreground">{t.thStorageType}</span>
-            <p className="text-foreground mt-0.5">{lang === 'ar' ? o.storage_types.name_ar : o.storage_types.name_en}</p>
+            <p className="text-foreground mt-0.5">{lang === 'ar' ? o.storage_types?.name_ar : o.storage_types?.name_en}</p>
           </div>
           <div>
             <span className="text-muted-foreground">{t.thDuration}</span>
@@ -153,64 +178,65 @@ const DashboardPage = () => {
         </div>
         <div className="flex items-center justify-between pt-1 border-t border-border/50">
           <span className="text-xs text-muted-foreground">{t.thTotal}</span>
-          <span className="text-sm font-bold text-foreground">{o.total_price.toLocaleString()} {t.sar}</span>
+          <span className="text-sm font-bold text-foreground">{o.total_price?.toLocaleString()} {t.sar}</span>
         </div>
       </div>
     );
   };
 
   // Mobile card view for products
-  const MobileProductCard = ({ p }: { p: typeof mockProducts[0] }) => (
+  const MobileProductCard = ({ p }: { p: Order }) => (
     <div className="glass rounded-xl p-4 space-y-2">
       <div className="flex items-center justify-between">
-        <span className="font-medium text-foreground text-sm">{p.name}</span>
-        <Badge className={`${statusColor(p.status)} border-none text-[10px]`}>{p.status}</Badge>
+        <span className="font-medium text-foreground text-sm">{p.product_name || "N/A"}</span>
+        <Badge className={`${statusColor(p.status)} border-none text-[10px]`}>{p.status.replace('_', ' ')}</Badge>
       </div>
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div>
           <span className="text-muted-foreground">{t.thType}</span>
-          <p className="text-foreground mt-0.5">{p.type}</p>
+          <p className="text-foreground mt-0.5">{p.product_type || "N/A"}</p>
         </div>
         <div>
           <span className="text-muted-foreground">{t.thQuantity}</span>
-          <p className="text-foreground mt-0.5">{p.qty}</p>
+          <p className="text-foreground mt-0.5">{p.quantity || 0}</p>
         </div>
         <div>
           <span className="text-muted-foreground">{t.thArea}</span>
-          <p className="text-foreground mt-0.5">{p.size}</p>
+          <p className="text-foreground mt-0.5">{p.area} {t.sqm}</p>
         </div>
         <div>
           <span className="text-muted-foreground">{t.thStorageType}</span>
-          <p className="text-foreground mt-0.5">{p.storage}</p>
+          <p className="text-foreground mt-0.5">{lang === 'ar' ? p.storage_types?.name_ar : p.storage_types?.name_en}</p>
         </div>
       </div>
     </div>
   );
 
   // Mobile card view for invoices
-  const MobileInvoiceCard = ({ inv }: { inv: typeof mockInvoices[0] }) => (
+  const MobileInvoiceCard = ({ inv }: { inv: Invoice }) => (
     <div className="glass rounded-xl p-4 space-y-2">
       <div className="flex items-center justify-between">
-        <span className="font-medium text-foreground text-sm">{inv.id}</span>
+        <span className="font-medium text-foreground text-sm">{inv.id.split('-')[0].toUpperCase()}</span>
         <Badge className={`${statusColor(inv.status)} border-none text-[10px]`}>{inv.status}</Badge>
       </div>
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div>
           <span className="text-muted-foreground">{t.thOrder}</span>
-          <p className="text-primary mt-0.5">{inv.order}</p>
+          <p className="text-primary mt-0.5">{inv.order_id.split('-')[0].toUpperCase()}</p>
         </div>
         <div>
           <span className="text-muted-foreground">{t.thDate}</span>
-          <p className="text-foreground mt-0.5">{inv.date}</p>
+          <p className="text-foreground mt-0.5">{new Date(inv.created_at).toLocaleDateString()}</p>
         </div>
       </div>
       <div className="flex items-center justify-between pt-1 border-t border-border/50">
         <span className="text-xs text-muted-foreground">{t.thAmount}</span>
-        <span className="text-sm font-bold text-foreground">{inv.amount}</span>
+        <span className="text-sm font-bold text-foreground">{inv.amount?.toLocaleString()} {t.sar}</span>
       </div>
     </div>
   );
-  if (authLoading) {
+
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
@@ -270,22 +296,26 @@ const DashboardPage = () => {
                         <Badge className={`${statusColor(o.status)} border-none text-[10px]`}>{o.status.replace('_', ' ')}</Badge>
                       </div>
                     ))}
+                    {orders.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">{t.noOrders || "No orders found"}</p>}
                   </div>
                 </div>
                 <div className="glass rounded-xl p-4">
                   <h3 className="font-bold text-foreground text-sm mb-3">{t.storedProducts}</h3>
                   <div className="space-y-2">
-                    {mockProducts.map((p) => (
+                    {orders.filter(o => o.status === 'stored').map((p) => (
                       <div key={p.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/20">
                         <div>
-                          <span className="font-medium text-foreground text-xs">{p.name}</span>
+                          <span className="font-medium text-foreground text-xs">{p.product_name}</span>
                           <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mt-0.5">
-                            <MapPin className="w-2.5 h-2.5" /> {p.size} - {p.storage}
+                            <MapPin className="w-2.5 h-2.5" /> {p.area} {t.sqm} - {lang === 'ar' ? p.storage_types?.name_ar : p.storage_types?.name_en}
                           </div>
                         </div>
                         <Badge className={`${statusColor(p.status)} border-none text-[10px]`}>{p.status}</Badge>
                       </div>
                     ))}
+                    {orders.filter(o => o.status === 'stored').length === 0 && (
+                       <p className="text-xs text-muted-foreground text-center py-4">{t.noProducts || "No stored products found"}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -303,7 +333,8 @@ const DashboardPage = () => {
                 </Link>
               </div>
               <div className="space-y-3">
-                {mockProducts.map((p) => <MobileProductCard key={p.id} p={p} />)}
+                {orders.map((p) => <MobileProductCard key={p.id} p={p} />)}
+                {orders.length === 0 && <p className="text-sm text-muted-foreground text-center py-10">No products found</p>}
               </div>
             </div>
           )}
@@ -320,6 +351,7 @@ const DashboardPage = () => {
               </div>
               <div className="space-y-3">
                 {orders.map((o) => <MobileOrderCard key={o.id} o={o} />)}
+                {orders.length === 0 && <p className="text-sm text-muted-foreground text-center py-10">No orders found</p>}
               </div>
             </div>
           )}
@@ -333,7 +365,8 @@ const DashboardPage = () => {
                 </Button>
               </div>
               <div className="space-y-3">
-                {mockInvoices.map((inv) => <MobileInvoiceCard key={inv.id} inv={inv} />)}
+                {invoices.map((inv) => <MobileInvoiceCard key={inv.id} inv={inv} />)}
+                {invoices.length === 0 && <p className="text-sm text-muted-foreground text-center py-10">No invoices found</p>}
               </div>
             </div>
           )}
@@ -369,10 +402,16 @@ const DashboardPage = () => {
             <Settings className="w-5 h-5 shrink-0" />
             {sidebarOpen && <span>{t.servicesNav}</span>}
           </Link>
-          <Link to="/" className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/30">
+          <button 
+            onClick={async () => {
+              await signOut();
+              navigate("/");
+            }} 
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-muted/30"
+          >
             <LogOut className="w-5 h-5 shrink-0" />
             {sidebarOpen && <span>{t.logout}</span>}
-          </Link>
+          </button>
         </div>
       </aside>
 
@@ -441,22 +480,26 @@ const DashboardPage = () => {
                         <Badge className={`${statusColor(o.status)} border-none`}>{o.status.replace('_', ' ')}</Badge>
                       </div>
                     ))}
+                    {orders.length === 0 && <p className="text-sm text-muted-foreground text-center py-10">No orders found</p>}
                   </div>
                 </div>
                 <div className="glass rounded-xl p-6">
                   <h3 className="font-bold text-foreground mb-4">{t.storedProducts}</h3>
                   <div className="space-y-3">
-                    {mockProducts.map((p) => (
+                    {orders.filter(o => o.status === 'stored').map((p) => (
                       <div key={p.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/20">
                         <div>
-                          <span className="font-medium text-foreground text-sm">{p.name}</span>
+                          <span className="font-medium text-foreground text-sm">{p.product_name}</span>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                            <MapPin className="w-3 h-3" /> {p.size} - {p.storage}
+                            <MapPin className="w-3 h-3" /> {p.area} {t.sqm} - {lang === 'ar' ? p.storage_types?.name_ar : p.storage_types?.name_en}
                           </div>
                         </div>
                         <Badge className={`${statusColor(p.status)} border-none`}>{p.status}</Badge>
                       </div>
                     ))}
+                    {orders.filter(o => o.status === 'stored').length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-10">No stored products found</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -483,17 +526,20 @@ const DashboardPage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {mockProducts.map((p) => (
+                    {orders.map((p) => (
                       <tr key={p.id} className="border-b border-border/50 hover:bg-muted/10">
-                        <td className="p-4 font-medium text-foreground text-sm">{p.name}</td>
-                        <td className="p-4 text-muted-foreground text-sm">{p.type}</td>
-                        <td className="p-4 text-muted-foreground text-sm">{p.qty}</td>
-                        <td className="p-4 text-muted-foreground text-sm">{p.size}</td>
-                        <td className="p-4 text-muted-foreground text-sm">{p.storage}</td>
-                        <td className="p-4"><Badge className={`${statusColor(p.status)} border-none text-xs`}>{p.status}</Badge></td>
+                        <td className="p-4 font-medium text-foreground text-sm">{p.product_name || "N/A"}</td>
+                        <td className="p-4 text-muted-foreground text-sm">{p.product_type || "N/A"}</td>
+                        <td className="p-4 text-muted-foreground text-sm">{p.quantity || 0}</td>
+                        <td className="p-4 text-muted-foreground text-sm">{p.area} {t.sqm}</td>
+                        <td className="p-4 text-muted-foreground text-sm">{lang === 'ar' ? p.storage_types?.name_ar : p.storage_types?.name_en}</td>
+                        <td className="p-4"><Badge className={`${statusColor(p.status)} border-none text-xs`}>{p.status.replace('_', ' ')}</Badge></td>
                         <td className="p-4"><MoreVertical className="w-4 h-4 text-muted-foreground" /></td>
                       </tr>
                     ))}
+                    {orders.length === 0 && (
+                      <tr><td colSpan={7} className="p-10 text-center text-muted-foreground">No products found</td></tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -525,16 +571,19 @@ const DashboardPage = () => {
                         <tr key={o.id} className="border-b border-border/50 hover:bg-muted/10">
                           <td className="p-4 font-medium text-primary text-sm">{o.id.split('-')[0].toUpperCase()}</td>
                           <td className="p-4 text-muted-foreground text-sm">{new Date(o.created_at).toLocaleDateString()}</td>
-                          <td className="p-4 text-muted-foreground text-sm">{lang === 'ar' ? o.storage_types.name_ar : o.storage_types.name_en}</td>
+                          <td className="p-4 text-muted-foreground text-sm">{lang === 'ar' ? o.storage_types?.name_ar : o.storage_types?.name_en}</td>
                           <td className="p-4 text-muted-foreground text-sm">{o.duration_months} {t.nrMonth}</td>
                           <td className="p-4 text-sm text-foreground">
                             {o.area} {t.sqm}
                           </td>
-                          <td className="p-4 text-foreground font-bold text-sm">{o.total_price.toLocaleString()} {t.sar}</td>
+                          <td className="p-4 text-foreground font-bold text-sm">{o.total_price?.toLocaleString()} {t.sar}</td>
                           <td className="p-4"><Badge className={`${statusColor(o.status)} border-none text-xs`}>{o.status.replace('_', ' ')}</Badge></td>
                         </tr>
                       );
                     })}
+                    {orders.length === 0 && (
+                      <tr><td colSpan={7} className="p-10 text-center text-muted-foreground">No orders found</td></tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -559,15 +608,18 @@ const DashboardPage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {mockInvoices.map((inv) => (
+                    {invoices.map((inv) => (
                       <tr key={inv.id} className="border-b border-border/50 hover:bg-muted/10">
-                        <td className="p-4 font-medium text-foreground text-sm">{inv.id}</td>
-                        <td className="p-4 text-primary text-sm">{inv.order}</td>
-                        <td className="p-4 text-muted-foreground text-sm">{inv.date}</td>
-                        <td className="p-4 text-foreground font-bold text-sm">{inv.amount}</td>
+                        <td className="p-4 font-medium text-foreground text-sm">{inv.id.split('-')[0].toUpperCase()}</td>
+                        <td className="p-4 text-primary text-sm">{inv.order_id.split('-')[0].toUpperCase()}</td>
+                        <td className="p-4 text-muted-foreground text-sm">{new Date(inv.created_at).toLocaleDateString()}</td>
+                        <td className="p-4 text-foreground font-bold text-sm">{inv.amount?.toLocaleString()} {t.sar}</td>
                         <td className="p-4"><Badge className={`${statusColor(inv.status)} border-none text-xs`}>{inv.status}</Badge></td>
                       </tr>
                     ))}
+                    {invoices.length === 0 && (
+                      <tr><td colSpan={5} className="p-10 text-center text-muted-foreground">No invoices found</td></tr>
+                    )}
                   </tbody>
                 </table>
               </div>
