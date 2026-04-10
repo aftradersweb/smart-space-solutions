@@ -32,8 +32,10 @@ const CTASection = () => {
             </Link>
           </div>
         </div>
+      </div>
 
-        <div className="mt-20 pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+      <div className="container mx-auto px-6 md:px-12">
+        <div className="pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             <div className="bg-gradient-gold p-1.5 rounded-lg">
               <Warehouse className="w-4 h-4 text-primary-foreground" />
