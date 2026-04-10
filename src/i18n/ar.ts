@@ -502,7 +502,7 @@ const ar = {
   adminDays: "يوم",
   adminAddSpaceTitle: "إضافة مساحة جديدة",
   adminEditSpaceTitle: "تعديل المساحة",
-  adminCancel: "إلغاء",
+  // adminCancel already defined above
   adminSave: "حفظ",
   adminCapacity: "السعة",
 
