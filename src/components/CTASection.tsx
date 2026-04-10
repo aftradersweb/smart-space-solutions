@@ -12,7 +12,7 @@ const CTASection = () => {
       <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-secondary/10 rounded-full blur-3xl -translate-y-1/2" />
 
       <div className="container mx-auto px-6 md:px-12 relative z-10">
-        <div className="glass rounded-3xl p-12 md:p-20 text-center max-w-4xl mx-auto">
+        <div className="glass rounded-3xl p-8 md:p-16 text-center max-w-4xl mx-auto">
           <div className="bg-gradient-gold w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-8">
             <Warehouse className="w-8 h-8 text-primary-foreground" />
           </div>
