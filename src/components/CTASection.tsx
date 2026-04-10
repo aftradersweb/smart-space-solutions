@@ -1,10 +1,19 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Warehouse } from "lucide-react";
+import { Twitter, Instagram, Facebook, Linkedin, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
 
 const CTASection = () => {
   const { t, dir } = useLanguage();
+
+  const socialLinks = [
+    { icon: Twitter, href: "#", label: "Twitter" },
+    { icon: Instagram, href: "#", label: "Instagram" },
+    { icon: Facebook, href: "#", label: "Facebook" },
+    { icon: Linkedin, href: "#", label: "LinkedIn" },
+    { icon: MessageCircle, href: "#", label: "WhatsApp" },
+  ];
 
   return (
     <section className="py-12 md:py-24 bg-background relative overflow-hidden">
@@ -34,15 +43,47 @@ const CTASection = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-6 md:px-12">
-        <div className="pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <div className="bg-gradient-gold p-1.5 rounded-lg">
-              <Warehouse className="w-4 h-4 text-primary-foreground" />
+      {/* Footer */}
+      <div className="container mx-auto px-6 md:px-12 mt-16">
+        <div className="border-t border-border pt-8 space-y-6">
+          {/* Top row: Links + Social */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            {/* Quick Links */}
+            <div className="flex flex-wrap items-center justify-center gap-4 md:gap-6 text-sm">
+              <Link to="/services" className="text-muted-foreground hover:text-foreground transition-colors">{t.navServices}</Link>
+              <Link to="/contact" className="text-muted-foreground hover:text-foreground transition-colors">{t.navContact}</Link>
+              <Link to="#" className="text-muted-foreground hover:text-foreground transition-colors">{t.footerFAQ}</Link>
+              <Link to="#" className="text-muted-foreground hover:text-foreground transition-colors">{t.footerPrivacyPolicy}</Link>
+              <Link to="#" className="text-muted-foreground hover:text-foreground transition-colors">{t.footerTerms}</Link>
             </div>
-            <span className="font-bold text-foreground">{t.appName}</span>
+
+            {/* Social Icons */}
+            <div className="flex items-center gap-3">
+              {socialLinks.map((s) => (
+                <a
+                  key={s.label}
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-9 h-9 rounded-lg bg-muted/30 hover:bg-primary/20 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
+                  aria-label={s.label}
+                >
+                  <s.icon className="w-4 h-4" />
+                </a>
+              ))}
+            </div>
           </div>
-          <p>{t.allRightsReserved}</p>
+
+          {/* Bottom row: Brand + Copyright */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground pb-4">
+            <div className="flex items-center gap-2">
+              <div className="bg-gradient-gold p-1.5 rounded-lg">
+                <Warehouse className="w-4 h-4 text-primary-foreground" />
+              </div>
+              <span className="font-bold text-foreground">{t.appName}</span>
+            </div>
+            <p>{t.allRightsReserved}</p>
+          </div>
         </div>
       </div>
     </section>
