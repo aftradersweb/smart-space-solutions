@@ -445,7 +445,7 @@ const Step2 = ({ form, update, t, storageNatures, getIcon, lang }: {
         <div className="space-y-4">
           <Label className="text-foreground mb-3 block">Measurement Details</Label>
           <div className="grid grid-cols-2 gap-3">
-            {storageNatures.find(s => s.id === form.storageType)?.measurement_config.fields.map((field: string) => {
+            {(storageNatures.find(s => s.id === form.storageType)?.measurement_config.fields as string[] || []).map((field: string) => {
               if (field.includes('type')) {
                 const options = storageNatures.find(s => s.id === form.storageType)?.measurement_config.types || 
                                (storageNatures.find(s => s.id === form.storageType)?.measurement_config.box_sizes ? Object.keys(storageNatures.find(s => s.id === form.storageType)?.measurement_config.box_sizes) : []);
@@ -472,7 +472,7 @@ const Step2 = ({ form, update, t, storageNatures, getIcon, lang }: {
                       }}
                       className="w-full h-11 mt-1 rounded-md bg-muted/30 border border-border px-3 text-foreground text-sm">
                       <option value="">Select...</option>
-                      {options.map((opt: unknown) => <option key={opt as string} value={opt as string}>{opt as string}</option>)}
+                      {(options as string[]).map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
                     </select>
                   </div>
                 );
