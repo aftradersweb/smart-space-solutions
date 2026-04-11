@@ -1666,12 +1666,12 @@ const AdminPage = () => {
     const handleSave = async () => {
       const { error: infoErr } = await supabase
         .from('configurations')
-        .update({ value: companyInfo, updated_at: new Date() })
+        .update({ value: companyInfo, updated_at: new Date().toISOString() })
         .eq('key', 'company_info');
 
       const { error: socialErr } = await supabase
         .from('configurations')
-        .update({ value: socialMedia, updated_at: new Date() })
+        .update({ value: socialMedia, updated_at: new Date().toISOString() })
         .eq('key', 'social_media');
 
       if (!infoErr && !socialErr) {
