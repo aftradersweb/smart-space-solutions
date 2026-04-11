@@ -9,7 +9,7 @@ export interface StorageType {
   min_area?: number;
   min_duration_months?: number;
   icon_name?: string;
-  billing_unit?: 'sqm' | 'sqft' | 'cbm' | 'box' | 'shelf' | 'pallet' | 'unit';
+  billing_unit?: string;
   unit_name_en?: string;
   unit_name_ar?: string;
   slug?: string;
@@ -24,8 +24,8 @@ export interface Profile {
   company_name?: string;
   email: string;
   phone: string;
-  user_type: 'individual' | 'company' | 'admin';
-  role?: 'admin' | 'user';
+  user_type: string;
+  role?: string;
   nationality?: string;
   gender?: string;
   id_number?: string;
@@ -37,7 +37,7 @@ export interface Profile {
 export interface Order {
   id: string;
   created_at: string;
-  status: 'under_review' | 'approved' | 'active' | 'completed' | 'rejected' | 'available' | 'almost_full' | 'full' | 'stored' | 'in_transit' | 'paid' | 'pending';
+  status: string;
   area: number;
   duration_months: number;
   total_price: number;
