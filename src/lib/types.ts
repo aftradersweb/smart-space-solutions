@@ -13,7 +13,7 @@ export interface StorageType {
   unit_name_en?: string;
   unit_name_ar?: string;
   slug?: string;
-  measurement_config?: Record<string, unknown>;
+  measurement_config?: unknown;
   use_cases?: string[];
   pricing_factors?: string[];
 }
@@ -42,7 +42,7 @@ export interface Order {
   duration_months: number;
   total_price: number;
   notes?: string;
-  measurement_data?: Record<string, unknown>;
+  measurement_data?: unknown;
   storage_type_id: string;
   user_id: string;
   product_name?: string;
