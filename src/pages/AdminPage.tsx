@@ -1042,39 +1042,45 @@ const AdminPage = () => {
   const SpaceFormModal = () => {
     if (!showSpaceForm) return null;
     return (
-      <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setShowSpaceForm(false)}>
-        <div className="bg-card rounded-xl p-6 w-full max-w-md space-y-4 border border-border" onClick={e => e.stopPropagation()}>
-          <h3 className="font-bold text-foreground text-base">{editingSpace ? t.adminEditSpaceTitle : t.adminAddSpaceTitle}</h3>
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">{t.adminSpaceName} ({lang === "ar" ? "English" : "EN"})</label>
-              <Input value={spaceFormData.name} onChange={e => setSpaceFormData({ ...spaceFormData, name: e.target.value })} placeholder={lang === "ar" ? "e.g. Warehouse A" : "e.g. Warehouse A"} />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">{t.adminSpaceName} ({lang === "ar" ? "عربي" : "AR"})</label>
-              <Input value={spaceFormData.nameAr} onChange={e => setSpaceFormData({ ...spaceFormData, nameAr: e.target.value })} placeholder={lang === "ar" ? "مثال: المستودع أ" : "e.g. المستودع أ"} dir="rtl" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">{t.adminSpaceType}</label>
-              <Select value={spaceFormData.type} onValueChange={v => setSpaceFormData({ ...spaceFormData, type: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {types.map(t => <SelectItem key={t.id} value={t.id}>{t.name_en}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
+      <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-hidden" onClick={() => setShowSpaceForm(false)}>
+        <div className="bg-card rounded-xl w-full max-w-md border border-border flex flex-col max-h-[90vh] shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="p-6 border-b border-border">
+            <h3 className="font-bold text-foreground text-lg">{editingSpace ? t.adminEditSpaceTitle : t.adminAddSpaceTitle}</h3>
+          </div>
+          
+          <div className="p-6 overflow-y-auto space-y-4">
+            <div className="space-y-3">
               <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground">{t.adminCapacity} ({t.adminSqm || "Area"})</label>
-                <Input type="number" value={spaceFormData.capacity} onChange={e => setSpaceFormData({ ...spaceFormData, capacity: e.target.value })} placeholder={`100 ${t.adminSqm}`} />
+                <label className="text-xs text-muted-foreground">{t.adminSpaceName} ({lang === "ar" ? "English" : "EN"})</label>
+                <Input value={spaceFormData.name} onChange={e => setSpaceFormData({ ...spaceFormData, name: e.target.value })} placeholder={lang === "ar" ? "e.g. Warehouse A" : "e.g. Warehouse A"} />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs text-muted-foreground">{t.adminCapacityUnits || "Units Count"}</label>
-                <Input type="number" value={spaceFormData.capacityUnits} onChange={e => setSpaceFormData({ ...spaceFormData, capacityUnits: e.target.value })} placeholder="e.g. 50" />
+                <label className="text-xs text-muted-foreground">{t.adminSpaceName} ({lang === "ar" ? "عربي" : "AR"})</label>
+                <Input value={spaceFormData.nameAr} onChange={e => setSpaceFormData({ ...spaceFormData, nameAr: e.target.value })} placeholder={lang === "ar" ? "مثال: المستودع أ" : "e.g. المستودع أ"} dir="rtl" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">{t.adminSpaceType}</label>
+                <Select value={spaceFormData.type} onValueChange={v => setSpaceFormData({ ...spaceFormData, type: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {types.map(t => <SelectItem key={t.id} value={t.id}>{t.name_en}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">{t.adminCapacity} ({t.adminSqm || "Area"})</label>
+                  <Input type="number" value={spaceFormData.capacity} onChange={e => setSpaceFormData({ ...spaceFormData, capacity: e.target.value })} placeholder={`100 ${t.adminSqm}`} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">{t.adminCapacityUnits || "Units Count"}</label>
+                  <Input type="number" value={spaceFormData.capacityUnits} onChange={e => setSpaceFormData({ ...spaceFormData, capacityUnits: e.target.value })} placeholder="e.g. 50" />
+                </div>
               </div>
             </div>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+
+          <div className="p-4 border-t border-border flex justify-end gap-2 bg-muted/10 rounded-b-xl">
             <Button variant="ghost" onClick={() => setShowSpaceForm(false)}>{t.adminCancel}</Button>
             <Button onClick={handleSaveSpace}>{t.adminSave}</Button>
           </div>
@@ -1086,9 +1092,13 @@ const AdminPage = () => {
   const PricingFormModal = () => {
     if (!showPricingForm) return null;
     return (
-      <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowPricingForm(false)}>
-        <div className="bg-card rounded-xl p-6 w-full max-w-2xl space-y-4 border border-border my-8" onClick={e => e.stopPropagation()}>
-          <h3 className="font-bold text-foreground text-lg">{editingPricing ? t.adminEditPricingTitle || "Edit Storage Type" : "Add New Storage Type"}</h3>
+      <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-hidden" onClick={() => setShowPricingForm(false)}>
+        <div className="bg-card rounded-xl w-full max-w-2xl border border-border flex flex-col max-h-[90vh] shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="p-6 border-b border-border">
+            <h3 className="font-bold text-foreground text-xl">{editingPricing ? t.adminEditPricingTitle || "Edit Storage Type" : "Add New Storage Type"}</h3>
+          </div>
+
+          <div className="p-6 overflow-y-auto space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground">{t.adminNameEn || "Name (EN)"}</label>
@@ -1116,70 +1126,74 @@ const AdminPage = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">{t.adminBillingUnit || "Billing Unit"}</label>
-              <Select value={pricingFormData.billingUnit} onValueChange={v => setPricingFormData({ ...pricingFormData, billingUnit: v })}>
-                <SelectTrigger className="glass"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sqm">{t.unitSqm || "Square Meter (sqm)"}</SelectItem>
-                  <SelectItem value="sqft">Square Foot (sqft)</SelectItem>
-                  <SelectItem value="cbm">Cubic Meter (cbm)</SelectItem>
-                  <SelectItem value="box">Box</SelectItem>
-                  <SelectItem value="shelf">Shelf</SelectItem>
-                  <SelectItem value="pallet">Pallet</SelectItem>
-                  <SelectItem value="unit">Unit / Piece</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {pricingFormData.billingUnit !== "sqm" && (
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1.5">
-                  <label className="text-xs text-muted-foreground">Unit (EN)</label>
-                  <Input value={pricingFormData.unitEn} onChange={e => setPricingFormData({ ...pricingFormData, unitEn: e.target.value })} placeholder="Box" />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs text-muted-foreground">Unit (AR)</label>
-                  <Input value={pricingFormData.unitAr} onChange={e => setPricingFormData({ ...pricingFormData, unitAr: e.target.value })} placeholder="صندوق" dir="rtl" />
-                </div>
+          <div className="glass p-4 rounded-lg space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-primary">Billing Configuration</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">{t.adminBillingUnit || "Billing Unit"}</label>
+                <Select value={pricingFormData.billingUnit} onValueChange={v => setPricingFormData({ ...pricingFormData, billingUnit: v })}>
+                  <SelectTrigger className="glass"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sqm">{t.unitSqm || "Square Meter (sqm)"}</SelectItem>
+                    <SelectItem value="sqft">Square Foot (sqft)</SelectItem>
+                    <SelectItem value="cbm">Cubic Meter (cbm)</SelectItem>
+                    <SelectItem value="box">Box</SelectItem>
+                    <SelectItem value="shelf">Shelf</SelectItem>
+                    <SelectItem value="pallet">Pallet</SelectItem>
+                    <SelectItem value="unit">Unit / Piece</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs text-muted-foreground">Measurement Config (JSON)</label>
-            <textarea 
-              className="w-full h-48 bg-background/50 border border-border rounded-lg p-3 font-mono text-xs focus:ring-2 focus:ring-primary/30 outline-none"
-              value={pricingFormData.measurementConfig}
-              onChange={e => setPricingFormData({ ...pricingFormData, measurementConfig: e.target.value })}
-              placeholder='{"primary_unit": "m2", "fields": ["length", "width"]}'
-            />
-            <p className="text-[10px] text-muted-foreground">Defines inputs (fields) and calculation formulas.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">{t.adminDescriptionEn || "Description (EN)"}</label>
-              <textarea 
-                className="w-full h-24 bg-background/50 border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-                value={pricingFormData.descriptionEn}
-                onChange={e => setPricingFormData({ ...pricingFormData, descriptionEn: e.target.value })}
-                placeholder="Brief description for English users"
-              />
+              {pricingFormData.billingUnit !== "sqm" && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-muted-foreground">Unit (EN)</label>
+                    <Input value={pricingFormData.unitEn} onChange={e => setPricingFormData({ ...pricingFormData, unitEn: e.target.value })} placeholder="Box" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-muted-foreground">Unit (AR)</label>
+                    <Input value={pricingFormData.unitAr} onChange={e => setPricingFormData({ ...pricingFormData, unitAr: e.target.value })} placeholder="صندوق" dir="rtl" />
+                  </div>
+                </div>
+              )}
             </div>
+
             <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">{t.adminDescriptionAr || "Description (AR)"}</label>
+              <label className="text-xs text-muted-foreground">Measurement Config (JSON)</label>
               <textarea 
-                className="w-full h-24 bg-background/50 border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary/30 outline-none"
-                value={pricingFormData.descriptionAr}
-                onChange={e => setPricingFormData({ ...pricingFormData, descriptionAr: e.target.value })}
-                dir="rtl"
-                placeholder="وصف مختصر للمستخدمين بالعربية"
+                className="w-full h-32 bg-background/50 border border-border rounded-lg p-3 font-mono text-[10px] focus:ring-2 focus:ring-primary/30 outline-none"
+                value={pricingFormData.measurementConfig}
+                onChange={e => setPricingFormData({ ...pricingFormData, measurementConfig: e.target.value })}
+                placeholder='{"primary_unit": "m2", "fields": ["length", "width"]}'
               />
+              <p className="text-[10px] text-muted-foreground">Defines inputs (fields) and calculation formulas.</p>
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4 border-t border-border mt-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">{t.adminDescriptionEn || "Description (EN)"}</label>
+                <textarea 
+                  className="w-full h-20 bg-background/50 border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                  value={pricingFormData.descriptionEn}
+                  onChange={e => setPricingFormData({ ...pricingFormData, descriptionEn: e.target.value })}
+                  placeholder="Brief description for English users"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">{t.adminDescriptionAr || "Description (AR)"}</label>
+                <textarea 
+                  className="w-full h-20 bg-background/50 border border-border rounded-lg p-2 text-sm text-right focus:ring-2 focus:ring-primary/30 outline-none"
+                  dir="rtl"
+                  value={pricingFormData.descriptionAr}
+                  onChange={e => setPricingFormData({ ...pricingFormData, descriptionAr: e.target.value })}
+                  placeholder="وصف مختصر للمستخدمين بالعربية"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6 border-t border-border flex gap-3 bg-muted/10 rounded-b-xl">
             <Button className="flex-1 h-11" onClick={handleSavePricing}>{t.adminSave}</Button>
             <Button variant="outline" className="flex-1 h-11 text-muted-foreground" onClick={() => setShowPricingForm(false)}>{t.adminCancel}</Button>
           </div>
