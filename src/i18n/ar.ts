@@ -160,6 +160,9 @@ const ar = {
   propertyInsurance: "تأمين الممتلكات",
   inventoryTracking: "جرد وتتبع",
   periodicReports: "تقارير دورية",
+  loginSuccess: "تم تسجيل الدخول بنجاح",
+  signupSuccess: "تم إنشاء الحساب بنجاح",
+  verifyEmailMsg: "يرجى التحقق من بريدك الإلكتروني لتفعيل الحساب",
 
   // CTA
   readyToStart: "جاهز للبدء؟",
@@ -269,6 +272,7 @@ const ar = {
   completed: "مكتمل",
   paid: "مدفوعة",
   pending: "معلقة",
+  noOrders: "لا يوجد طلبات",
 
   // New Request Page
   nrTitle: "طلب تخزين جديد",
@@ -405,6 +409,7 @@ const ar = {
   adminThPricePerSqm: "السعر / م² / شهر",
   adminThMinArea: "الحد الأدنى للمساحة",
   adminThMinDuration: "الحد الأدنى للمدة",
+  adminEditPricingTitle: "تعديل التسعير",
   adminEdit: "تعديل",
   adminManageUsers: "إدارة المستخدمين",
   adminThName: "الاسم",
@@ -528,6 +533,7 @@ const ar = {
   adminOrderStatus: "الحالة",
   adminOrderExtras: "خدمات إضافية",
   adminOrderNotes: "ملاحظات",
+  adminOrderPhotos: "صور المنتج",
 
   // Footer
   footerPrivacyPolicy: "سياسة الخصوصية",
@@ -537,6 +543,39 @@ const ar = {
   footerLinks: "روابط سريعة",
   unknownClient: "عميل غير معروف",
   noProducts: "لا توجد منتجات",
+  adminTabServices: "الخدمات",
+  adminTabFAQs: "الأسئلة الشائعة",
+  adminTabContent: "سياسات المحتوى",
+  adminTabProductTypes: "أنواع المنتجات",
+  adminAddService: "إضافة خدمة",
+  adminAddFAQ: "إضافة سؤال",
+  adminAddPage: "إضافة صفحة محتوى",
+  adminAddProductType: "إضافة نوع منتج",
+  adminTitleEn: "العنوان (إنجليزي)",
+  adminTitleAr: "العنوان (عربي)",
+  adminNameEn: "الاسم (إنجليزي)",
+  adminNameAr: "الاسم (عربي)",
+  adminQuestionEn: "السؤال (إنجليزي)",
+  adminQuestionAr: "السؤال (عربي)",
+  adminAnswerEn: "الإجابة (إنجليزي)",
+  adminAnswerAr: "الإجابة (عربي)",
+  adminContentEn: "المحتوى (إنجليزي)",
+  adminContentAr: "المحتوى (عربي)",
+  adminCategory: "الفئة",
+  adminPrice: "السعر",
+  adminIcon: "اسم الأيقونة",
+  adminSlug: "معرف الرابط",
+  adminNoData: "لا توجد سجلات",
+  adminPaginationShowing: "عرض",
+  adminPaginationOf: "من",
+  adminCapacityUnits: "عدد الوحدات",
+  adminBillingUnit: "وحدة المحاسبة",
+  unitSqm: "متر مربع (sqm)",
+  adminThPricePerUnit: "السعر / الوحدة",
+  adminThBillingUnit: "الوحدة",
+  adminDescriptionEn: "الوصف (إنجليزي)",
+  adminDescriptionAr: "الوصف (عربي)",
+  adminAddPricing: "إضافة نوع تخزين",
 };
 
 export default ar;

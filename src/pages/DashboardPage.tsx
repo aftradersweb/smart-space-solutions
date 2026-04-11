@@ -16,30 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useEffect } from "react";
 
-interface Order {
-  id: string;
-  created_at: string;
-  status: string;
-  area: number;
-  duration_months: number;
-  total_price: number;
-  product_name: string;
-  product_type: string;
-  quantity: number;
-  weight: string;
-  storage_types: {
-    name_en: string;
-    name_ar: string;
-  };
-}
-
-interface Invoice {
-  id: string;
-  order_id: string;
-  amount: number;
-  status: string;
-  created_at: string;
-}
+import { Order, Invoice } from "@/lib/types";
 
 type Tab = "overview" | "products" | "orders" | "invoices";
 const DashboardPage = () => {
@@ -81,7 +58,7 @@ const DashboardPage = () => {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (ordersData) setOrders(ordersData as any);
+      if (ordersData) setOrders(ordersData as unknown as Order[]);
 
       // Fetch invoices
       const { data: invoicesData, error: invoicesError } = await supabase
@@ -90,7 +67,7 @@ const DashboardPage = () => {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
-      if (invoicesData) setInvoices(invoicesData);
+      if (invoicesData) setInvoices(invoicesData as unknown as Invoice[]);
 
       setLoading(false);
     };

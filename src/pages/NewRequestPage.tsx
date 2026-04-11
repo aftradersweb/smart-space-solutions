@@ -14,15 +14,8 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { supabase } from "@/lib/supabase";
 import { useEffect } from "react";
 
-interface StorageType {
-  id: string;
-  name_en: string;
-  name_ar: string;
-  description_en: string;
-  description_ar: string;
-  price_per_sqm_month: number;
-  icon_name: string;
-}
+import { StorageType, ProductType, Service } from "@/lib/types";
+import { ClipboardList } from "lucide-react";
 
 interface FormData {
   productName: string;
@@ -37,6 +30,7 @@ interface FormData {
   pickupAddress: string;
   deliveryAddress: string;
   images: { file: File; preview: string }[];
+  measurementData: Record<string, string | number>;
 }
 
 const initialForm: FormData = {
@@ -52,6 +46,7 @@ const initialForm: FormData = {
   pickupAddress: "",
   deliveryAddress: "",
   images: [],
+  measurementData: {},
 };
 
 const NewRequestPage = () => {
@@ -71,30 +66,32 @@ const NewRequestPage = () => {
   ];
 
   const [storageNatures, setStorageNatures] = useState<StorageType[]>([]);
+  const [productTypes, setProductTypes] = useState<ProductType[]>([]);
+  const [extraServices, setExtraServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchStorageTypes = async () => {
-      const { data, error } = await supabase
-        .from('storage_types')
-        .select('*');
-      if (data) {
-        setStorageNatures(data);
-        if (data.length > 0 && !form.storageType) {
-          update("storageType", data[0].id);
+    const fetchData = async () => {
+      // Fetch Storage Types
+      const { data: stData } = await supabase.from('storage_types').select('*');
+      if (stData) {
+        setStorageNatures(stData);
+        if (stData.length > 0 && !form.storageType) {
+          update("storageType", stData[0].id);
         }
       }
-    };
-    fetchStorageTypes();
-  }, []);
 
-  const extraServices = [
-    { id: "pickup", name: t.nrPickup, price: 150 },
-    { id: "delivery", name: t.nrDelivery, price: 150 },
-    { id: "packing", name: t.nrPacking, price: 100 },
-    { id: "insurance", name: t.nrInsurance, price: 80 },
-    { id: "inventory", name: t.nrInventory, price: 60 },
-  ];
+      // Fetch Product Types
+      const { data: ptData } = await supabase.from('product_types').select('*').eq('is_active', true);
+      if (ptData) setProductTypes(ptData);
+
+      // Fetch Services
+      const { data: sData } = await supabase.from('services').select('*').eq('is_active', true);
+      if (sData) setExtraServices(sData);
+    };
+    fetchData();
+  }, [form.storageType]);
+
 
   const update = <K extends keyof FormData>(key: K, value: FormData[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -126,6 +123,11 @@ const NewRequestPage = () => {
       case 'ShieldCheck': return ShieldCheck;
       case 'AlertTriangle': return AlertTriangle;
       case 'Car': return Car;
+      case 'ClipboardList': return ClipboardList;
+      case 'MapPin': return MapPin;
+      case 'Truck': return Truck;
+      case 'Package': return Package;
+      case 'Shield': return Shield;
       default: return Warehouse;
     }
   };
@@ -184,15 +186,17 @@ const NewRequestPage = () => {
           delivery_address: form.deliveryAddress,
           notes: form.description,
           product_images: imageUrls,
-          status: 'under_review'
+          status: 'under_review',
+          measurement_data: form.measurementData
         });
 
       if (error) throw error;
 
       toast.success(t.nrSuccessMsg, { duration: 4000 });
       navigate("/dashboard");
-    } catch (error: any) {
-      toast.error(error.message || "Something went wrong");
+    } catch (error) {
+      const err = error as Error;
+      toast.error(err.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -276,9 +280,9 @@ const NewRequestPage = () => {
 
         {/* Step Content */}
         <div className="glass rounded-2xl p-6 md:p-10 mb-8">
-          {step === 1 && <Step1 form={form} update={update} t={t} />}
+          {step === 1 && <Step1 form={form} update={update} t={t} productTypes={productTypes} lang={lang} />}
           {step === 2 && <Step2 form={form} update={update} t={t} storageNatures={storageNatures} getIcon={getIcon} lang={lang} />}
-          {step === 3 && <Step3 form={form} toggleExtra={toggleExtra} update={update} t={t} extraServices={extraServices} />}
+          {step === 3 && <Step3 form={form} toggleExtra={toggleExtra} update={update} t={t} extraServices={extraServices} lang={lang} />}
           {step === 4 && (
             <Step4 images={form.images} addImages={addImages} removeImage={removeImage} fileInputRef={fileInputRef} t={t} />
           )}
@@ -331,7 +335,13 @@ const NewRequestPage = () => {
 type T = ReturnType<typeof useLanguage>["t"];
 
 /* ── Step 1: Product Info ── */
-const Step1 = ({ form, update, t }: { form: FormData; update: <K extends keyof FormData>(k: K, v: FormData[K]) => void; t: T }) => (
+const Step1 = ({ form, update, t, productTypes, lang }: { 
+  form: FormData; 
+  update: <K extends keyof FormData>(k: K, v: FormData[K]) => void; 
+  t: T;
+  productTypes: ProductType[];
+  lang: string;
+}) => (
   <div className="space-y-6">
     <h2 className="text-xl font-bold text-foreground mb-2">{t.nrProductInfo}</h2>
     <p className="text-muted-foreground text-sm mb-6">{t.nrProductInfoDesc}</p>
@@ -347,7 +357,9 @@ const Step1 = ({ form, update, t }: { form: FormData; update: <K extends keyof F
         <select value={form.productType} onChange={(e) => update("productType", e.target.value)}
           className="w-full h-11 rounded-md bg-muted/30 border border-border px-3 text-foreground text-sm">
           <option value="">{t.nrSelectType}</option>
-          {t.nrProductTypes.map((pt) => <option key={pt} value={pt}>{pt}</option>)}
+          {productTypes.map((pt) => <option key={pt.id} value={lang === 'ar' ? pt.name_ar : pt.name_en}>
+            {lang === 'ar' ? pt.name_ar : pt.name_en}
+          </option>)}
         </select>
       </div>
       <div>
@@ -371,13 +383,30 @@ const Step1 = ({ form, update, t }: { form: FormData; update: <K extends keyof F
   </div>
 );
 
+const evaluateFormula = (formulaStr: string, data: Record<string, string | number>): number => {
+  if (!formulaStr) return 0;
+  let computedStr = formulaStr;
+  for (const [key, value] of Object.entries(data)) {
+    const regex = new RegExp(`\\b${key}\\b`, 'g');
+    computedStr = computedStr.replace(regex, `${Number(value) || 0}`);
+  }
+  try {
+    if (/^[0-9+\-*/() .]+$/.test(computedStr)) {
+      return new Function(`return ${computedStr}`)() || 0;
+    }
+  } catch {
+    return 0;
+  }
+  return 0;
+};
+
 /* ── Step 2: Storage Config ── */
 const Step2 = ({ form, update, t, storageNatures, getIcon, lang }: {
   form: FormData;
   update: <K extends keyof FormData>(k: K, v: FormData[K]) => void;
   t: T;
   storageNatures: StorageType[];
-  getIcon: (name: string) => any;
+  getIcon: (name: string) => React.ComponentType<{ className?: string }>;
   lang: string;
 }) => (
   <div className="space-y-6">
@@ -388,9 +417,12 @@ const Step2 = ({ form, update, t, storageNatures, getIcon, lang }: {
       <Label className="text-foreground mb-3 block">{t.nrStorageType}</Label>
       <div className="grid sm:grid-cols-2 gap-3">
         {storageNatures.map((type) => {
-          const Icon = getIcon(type.icon_name);
+          const Icon = getIcon(type.icon_name || '');
           return (
-            <button key={type.id} onClick={() => update("storageType", type.id)}
+            <button key={type.id} onClick={() => {
+              update("storageType", type.id);
+              update("measurementData", {});
+            }}
               className={`flex items-start gap-3 p-4 rounded-xl border-2 text-start transition-all ${
                 form.storageType === type.id ? "border-primary bg-primary/10" : "border-border hover:border-muted-foreground/30"
               }`}>
@@ -400,7 +432,7 @@ const Step2 = ({ form, update, t, storageNatures, getIcon, lang }: {
               <div>
                 <div className="font-bold text-foreground text-sm">{lang === 'ar' ? type.name_ar : type.name_en}</div>
                 <div className="text-xs text-muted-foreground">{lang === 'ar' ? type.description_ar : type.description_en}</div>
-                <div className="text-primary font-bold text-xs mt-1">{type.price_per_sqm_month} {t.nrPriceUnit}</div>
+                <div className="text-primary font-bold text-xs mt-1">{type.price_per_sqm_month} {type.billing_unit ? (lang === 'ar' ? type.unit_name_ar : type.unit_name_en) || type.billing_unit : t.nrPriceUnit}</div>
               </div>
             </button>
           );
@@ -409,18 +441,91 @@ const Step2 = ({ form, update, t, storageNatures, getIcon, lang }: {
     </div>
 
     <div className="grid sm:grid-cols-2 gap-6">
-      <div>
-        <Label className="text-foreground mb-3 block">{t.nrAreaRequired}</Label>
-        <div className="bg-muted/20 rounded-xl p-5">
-          <input type="range" min={1} max={200} value={form.area}
-            onChange={(e) => update("area", Number(e.target.value))} className="w-full accent-primary" />
-          <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-            <span>1 {t.nrSqm}</span>
-            <span className="text-xl font-black text-primary">{form.area} {t.nrSqm}</span>
-            <span>200 {t.nrSqm}</span>
+      {storageNatures.find(s => s.id === form.storageType)?.measurement_config?.fields ? (
+        <div className="space-y-4">
+          <Label className="text-foreground mb-3 block">Measurement Details</Label>
+          <div className="grid grid-cols-2 gap-3">
+            {storageNatures.find(s => s.id === form.storageType)?.measurement_config.fields.map((field: string) => {
+              if (field.includes('type')) {
+                const options = storageNatures.find(s => s.id === form.storageType)?.measurement_config.types || 
+                               (storageNatures.find(s => s.id === form.storageType)?.measurement_config.box_sizes ? Object.keys(storageNatures.find(s => s.id === form.storageType)?.measurement_config.box_sizes) : []);
+                return (
+                  <div key={field}>
+                    <Label className="text-xs text-muted-foreground capitalize">{field.replace('_', ' ')}</Label>
+                    <select 
+                      value={form.measurementData[field] || ''}
+                      onChange={(e) => {
+                        const newMeasurementData = { ...form.measurementData, [field]: e.target.value };
+                        update('measurementData', newMeasurementData);
+                        
+                        // Recalculate area
+                        const config = storageNatures.find(s => s.id === form.storageType)?.measurement_config;
+                        let newArea = form.area;
+                        if (config?.formula) {
+                          newArea = evaluateFormula(Object.values(config.formula)[0] as string, newMeasurementData);
+                        } else if (newMeasurementData.quantity) {
+                          newArea = Number(newMeasurementData.quantity);
+                        } else if (newMeasurementData.pallet_count) {
+                          newArea = Number(newMeasurementData.pallet_count);
+                        }
+                        if (newArea > 0) update('area', newArea);
+                      }}
+                      className="w-full h-11 mt-1 rounded-md bg-muted/30 border border-border px-3 text-foreground text-sm">
+                      <option value="">Select...</option>
+                      {options.map((opt: unknown) => <option key={opt as string} value={opt as string}>{opt as string}</option>)}
+                    </select>
+                  </div>
+                );
+              }
+              return (
+                <div key={field}>
+                  <Label className="text-xs text-muted-foreground capitalize">{field.replace('_', ' ')}</Label>
+                  <Input 
+                    type="number" 
+                    min={1} 
+                    value={form.measurementData[field] || ''}
+                    onChange={(e) => {
+                      const newMeasurementData = { ...form.measurementData, [field]: e.target.value };
+                      update('measurementData', newMeasurementData);
+                      
+                      // Recalculate area
+                      const config = storageNatures.find(s => s.id === form.storageType)?.measurement_config;
+                      let newArea = form.area;
+                      if (config?.formula) {
+                        newArea = evaluateFormula(Object.values(config.formula)[0] as string, newMeasurementData);
+                      } else if (newMeasurementData.quantity) {
+                        newArea = Number(newMeasurementData.quantity);
+                      } else if (newMeasurementData.pallet_count) {
+                        newArea = Number(newMeasurementData.pallet_count);
+                      }
+                      if (newArea > 0) update('area', newArea);
+                    }}
+                    placeholder={`Enter ${field}`} 
+                    className="bg-muted/30 mt-1 border-border h-11" 
+                  />
+                </div>
+              );
+            })}
+          </div>
+          <div className="text-sm border rounded-md p-3 text-muted-foreground">
+            Computed Final Unit Count: <strong className="text-primary">{form.area}</strong>
           </div>
         </div>
-      </div>
+      ) : (
+        <div>
+          <Label className="text-foreground mb-3 block">{t.nrAreaRequired}</Label>
+          <div className="bg-muted/20 rounded-xl p-5">
+            <input type="range" min={1} max={200} value={form.area}
+              onChange={(e) => update("area", Number(e.target.value))} className="w-full accent-primary" />
+            <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+              <span>1 {t.nrSqm}</span>
+              <span className="text-xl font-black text-primary">{form.area} {t.nrSqm}</span>
+              <span>200 {t.nrSqm}</span>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div>
         <Label className="text-foreground mb-3 block">{t.nrDuration}</Label>
         <div className="bg-muted/20 rounded-xl p-5">
@@ -438,12 +543,13 @@ const Step2 = ({ form, update, t, storageNatures, getIcon, lang }: {
 );
 
 /* ── Step 3: Extras ── */
-const Step3 = ({ form, toggleExtra, update, t, extraServices }: {
+const Step3 = ({ form, toggleExtra, update, t, extraServices, lang }: {
   form: FormData;
   toggleExtra: (id: string) => void;
   update: <K extends keyof FormData>(k: K, v: FormData[K]) => void;
   t: T;
-  extraServices: { id: string; name: string; price: number }[];
+  extraServices: Service[];
+  lang: string;
 }) => (
   <div className="space-y-6">
     <h2 className="text-xl font-bold text-foreground mb-2">{t.nrExtras}</h2>
@@ -461,7 +567,7 @@ const Step3 = ({ form, toggleExtra, update, t, extraServices }: {
             }`}>
               {form.extras.includes(svc.id) && <Check className="w-3 h-3 text-primary-foreground" />}
             </div>
-            <span className="font-medium text-foreground text-sm">{svc.name}</span>
+            <span className="font-medium text-foreground text-sm">{lang === 'ar' ? svc.title_ar : svc.title_en}</span>
           </div>
           <span className="text-primary font-bold text-sm">{svc.price} {t.nrSarMonth}</span>
         </button>
@@ -539,12 +645,12 @@ const Step4 = ({ images, addImages, removeImage, fileInputRef, t }: {
 /* ── Step 5: Summary ── */
 const Step5 = ({ form, storageInfo, storagePrice, extrasPrice, total, t, extraServices, lang }: {
   form: FormData;
-  storageInfo: any;
+  storageInfo: StorageType | undefined;
   storagePrice: number;
   extrasPrice: number;
   total: number;
   t: T;
-  extraServices: { id: string; name: string; price: number }[];
+  extraServices: Service[];
   lang: string;
 }) => (
   <div className="space-y-6">
@@ -587,7 +693,7 @@ const Step5 = ({ form, storageInfo, storagePrice, extrasPrice, total, t, extraSe
               const svc = extraServices.find((e) => e.id === id);
               return svc ? (
                 <li key={id} className="flex justify-between text-sm">
-                  <span className="text-foreground">{svc.name}</span>
+                  <span className="text-foreground">{lang === 'ar' ? svc.title_ar : svc.title_en}</span>
                   <span className="text-primary font-bold">{svc.price} {t.nrSarMonth}</span>
                 </li>
               ) : null;

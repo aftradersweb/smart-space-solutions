@@ -160,6 +160,9 @@ const en = {
   propertyInsurance: "Property Insurance",
   inventoryTracking: "Inventory & Tracking",
   periodicReports: "Periodic Reports",
+  loginSuccess: "Logged in successfully",
+  signupSuccess: "Account created successfully",
+  verifyEmailMsg: "Please check your email to verify your account",
 
   // CTA
   readyToStart: "Ready to Start?",
@@ -269,6 +272,7 @@ const en = {
   completed: "Completed",
   paid: "Paid",
   pending: "Pending",
+  noOrders: "No orders found",
 
   // New Request Page
   nrTitle: "New Storage Request",
@@ -405,6 +409,7 @@ const en = {
   adminThPricePerSqm: "Price / sqm / month",
   adminThMinArea: "Min Area",
   adminThMinDuration: "Min Duration",
+  adminEditPricingTitle: "Edit Pricing",
   adminEdit: "Edit",
   adminManageUsers: "Manage Users",
   adminThName: "Name",
@@ -528,6 +533,7 @@ const en = {
   adminOrderStatus: "Status",
   adminOrderExtras: "Additional Services",
   adminOrderNotes: "Notes",
+  adminOrderPhotos: "Product Photos",
 
   // Footer
   footerPrivacyPolicy: "Privacy Policy",
@@ -537,6 +543,39 @@ const en = {
   footerLinks: "Quick Links",
   unknownClient: "Unknown Client",
   noProducts: "No products found",
+  adminTabServices: "Services",
+  adminTabFAQs: "FAQs",
+  adminTabContent: "Content Policies",
+  adminTabProductTypes: "Product Types",
+  adminAddService: "Add Service",
+  adminAddFAQ: "Add FAQ",
+  adminAddPage: "Add Content Page",
+  adminAddProductType: "Add Product Type",
+  adminTitleEn: "Title (EN)",
+  adminTitleAr: "Title (AR)",
+  adminNameEn: "Name (EN)",
+  adminNameAr: "Name (AR)",
+  adminQuestionEn: "Question (EN)",
+  adminQuestionAr: "Question (AR)",
+  adminAnswerEn: "Answer (EN)",
+  adminAnswerAr: "Answer (AR)",
+  adminContentEn: "Content (EN)",
+  adminContentAr: "Content (AR)",
+  adminCategory: "Category",
+  adminPrice: "Price",
+  adminIcon: "Icon Name",
+  adminSlug: "URL Slug",
+  adminNoData: "No records found",
+  adminPaginationShowing: "Showing",
+  adminPaginationOf: "of",
+  adminCapacityUnits: "Units Count",
+  adminBillingUnit: "Billing Unit",
+  unitSqm: "Square Meter (sqm)",
+  adminThPricePerUnit: "Price / Unit",
+  adminThBillingUnit: "Unit",
+  adminDescriptionEn: "Description (EN)",
+  adminDescriptionAr: "Description (AR)",
+  adminAddPricing: "Add Storage Type",
 };
 
 export default en;

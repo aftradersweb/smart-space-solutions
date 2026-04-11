@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import {
@@ -7,7 +7,7 @@ import {
   CheckCircle, XCircle, Clock, MoreVertical, TrendingUp, Package, Globe,
   Settings, Save, Download, FileText, FileSpreadsheet,
   Twitter, Instagram, Facebook, Linkedin, MessageCircle,
-  Plus, Pencil, ArrowLeft, Power
+  Plus, Pencil, ArrowLeft, Power, Settings2, Image, ExternalLink
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -22,52 +22,21 @@ import { useAuth } from "@/contexts/AuthContext";
 import MobileTopBar from "@/components/MobileTopBar";
 import MobileBottomNav from "@/components/MobileBottomNav";
 
-interface AdminOrder {
-  id: string;
-  created_at: string;
-  status: string;
-  area: number;
-  duration_months: number;
-  total_price: number;
-  notes: string;
-  storage_type_id: string;
-  user_id: string;
-  profiles: {
-    full_name: string;
-    company_name: string;
-    user_type: string;
-  } | null;
-  storage_types: {
-    name_en: string;
-    name_ar: string;
-  } | null;
-}
+import { Order, Profile, StorageSpace, StorageType, Configuration, Service, ProductType, FAQ, ContentPage } from "@/lib/types";
 
-interface AdminProfile {
-  id: string;
-  full_name: string;
-  email: string;
-  phone: string;
-  user_type: string;
-  created_at: string;
-}
-
-interface AdminSpace {
-  id: string;
-  name_en: string;
-  name_ar: string;
-  storage_type_id: string;
-  capacity: number;
-  used_capacity: number;
-  status: string;
-  is_active: boolean;
-}
-
-type Tab = "overview" | "orders" | "spaces" | "pricing" | "users" | "settings";
+type Tab = "overview" | "orders" | "spaces" | "pricing" | "users" | "settings" | "services" | "faqs" | "content" | "product_types";
 
 type SpaceItem = {
   id: string; name: string; nameAr: string; type: string; capacity: string; used: string; percent: number; status: string; active: boolean;
 };
+
+interface PricingItem {
+  id: string;
+  storage_types: StorageType;
+  price_per_sqm_month: number;
+  min_area: number;
+  min_duration_months: number;
+}
 
 type SpaceStoredItem = {
   id: string; item: string; owner: string; remainingDays: number; startDate: string; endDate: string;
@@ -85,11 +54,18 @@ const AdminPage = () => {
 
   const [tab, setTab] = useState<Tab>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [orders, setOrders] = useState<AdminOrder[]>([]);
-  const [profiles, setProfiles] = useState<AdminProfile[]>([]);
-  const [spaces, setSpaces] = useState<AdminSpace[]>([]);
-  const [types, setTypes] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [spaces, setSpaces] = useState<StorageSpace[]>([]);
+  const [types, setTypes] = useState<StorageType[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [faqs, setFaqs] = useState<FAQ[]>([]);
+  const [productTypes, setProductTypes] = useState<ProductType[]>([]);
+  const [contentPages, setContentPages] = useState<ContentPage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const ITEMS_PER_PAGE = 10;
 
   // Selection states
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
@@ -98,16 +74,17 @@ const AdminPage = () => {
 
   // Form states
   const [showSpaceForm, setShowSpaceForm] = useState(false);
-  const [editingSpace, setEditingSpace] = useState<any | null>(null);
+  const [editingSpace, setEditingSpace] = useState<StorageSpace | null>(null);
   const [spaceFormData, setSpaceFormData] = useState({
-    name: "", nameAr: "", type: "", capacity: ""
+    name: "", nameAr: "", type: "", capacity: "", capacityUnits: ""
   });
 
   const [confirmAction, setConfirmAction] = useState<{orderId: string, type: 'approve' | 'reject'} | null>(null);
   const [showPricingForm, setShowPricingForm] = useState(false);
-  const [editingPricing, setEditingPricing] = useState<any | null>(null);
+  const [editingPricing, setEditingPricing] = useState<StorageType | null>(null);
   const [pricingFormData, setPricingFormData] = useState({
-    price: "", minArea: "", minDuration: ""
+    price: "", minArea: "", minDuration: "", billingUnit: "sqm", unitEn: "", unitAr: "",
+    nameEn: "", nameAr: "", slug: "", descriptionEn: "", descriptionAr: "", measurementConfig: ""
   });
   const [companyInfo, setCompanyInfo] = useState({
     name: "Smart Storage Hub",
@@ -120,11 +97,32 @@ const AdminPage = () => {
     twitter: "", instagram: "", facebook: "", linkedin: "", whatsapp: "", snapchat: "", tiktok: "",
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // New Content Forms
+  const [showServiceForm, setShowServiceForm] = useState(false);
+  const [editingService, setEditingService] = useState<Service | null>(null);
+  const [serviceFormData, setServiceFormData] = useState({
+    titleEn: "", titleAr: "", descEn: "", descAr: "", price: "", icon: ""
+  });
 
-  const fetchData = async () => {
+  const [showFAQForm, setShowFAQForm] = useState(false);
+  const [editingFAQ, setEditingFAQ] = useState<FAQ | null>(null);
+  const [faqFormData, setFaqFormData] = useState({
+    qEn: "", qAr: "", aEn: "", aAr: "", category: ""
+  });
+
+  const [showContentForm, setShowContentForm] = useState(false);
+  const [editingContent, setEditingContent] = useState<ContentPage | null>(null);
+  const [contentFormData, setContentFormData] = useState({
+    slug: "", titleEn: "", titleAr: "", contentEn: "", contentAr: ""
+  });
+
+  const [showPtForm, setShowPtForm] = useState(false);
+  const [editingPt, setEditingPt] = useState<ProductType | null>(null);
+  const [ptFormData, setPtFormData] = useState({
+    nameEn: "", nameAr: ""
+  });
+
+  const fetchData = useCallback(async () => {
     setLoading(true);
     
     // Fetch Orders
@@ -133,7 +131,7 @@ const AdminPage = () => {
       .select(`
         *,
         profiles (full_name, company_name, user_type),
-        storage_types (name_en, name_ar)
+        storage_types (name_en, name_ar, billing_unit, unit_name_en, unit_name_ar)
       `)
       .order('created_at', { ascending: false });
     
@@ -142,6 +140,11 @@ const AdminPage = () => {
       .from('profiles')
       .select('*')
       .order('created_at', { ascending: false });
+
+    setProfiles(pData || []);
+    setOrders(oData || []);
+
+
 
     // Fetch Spaces
     const { data: sData } = await supabase
@@ -153,22 +156,91 @@ const AdminPage = () => {
       .from('storage_types')
       .select('*');
 
-    if (oData) setOrders(oData as any);
-    if (pData) setProfiles(pData as any);
-    if (sData) setSpaces(sData as any);
-    if (tData) setTypes(tData as any);
+    if (oData) setOrders(oData as Order[]);
+    if (pData) setProfiles(pData as unknown as Profile[]);
+    if (sData) setSpaces(sData as unknown as StorageSpace[]);
+    if (tData) setTypes(tData as StorageType[]);
 
     // Fetch Configurations
     const { data: configData } = await supabase.from('configurations').select('*');
     if (configData) {
-      const info = configData.find(c => c.key === 'company_info')?.value;
-      const social = configData.find(c => c.key === 'social_media')?.value;
-      if (info) setCompanyInfo(info);
-      if (social) setSocialMedia(social);
+      const info = (configData as Configuration[]).find(c => c.key === 'company_info')?.value;
+      const social = (configData as Configuration[]).find(c => c.key === 'social_media')?.value;
+      if (info) setCompanyInfo(info as typeof companyInfo);
+      if (social) setSocialMedia(social as typeof socialMedia);
     }
+
+    // Fetch New Content Tables
+    const { data: svcData } = await supabase.from('services').select('*').order('created_at', { ascending: false });
+    const { data: faqData } = await supabase.from('faqs').select('*').order('created_at', { ascending: false });
+    const { data: ptData } = await supabase.from('product_types').select('*').order('created_at', { ascending: false });
+    const { data: pgData } = await supabase.from('content_pages').select('*').order('updated_at', { ascending: false });
+
+    if (svcData) setServices(svcData as Service[]);
+    if (faqData) setFaqs(faqData as FAQ[]);
+    if (ptData) setProductTypes(ptData as ProductType[]);
+    if (pgData) setContentPages(pgData as ContentPage[]);
     
     setLoading(false);
+  }, []);
+
+  const PaginationControls = ({ totalItems, currentPage, setCurrentPage }: { 
+    totalItems: number, 
+    currentPage: number, 
+    setCurrentPage: (page: number) => void 
+  }) => {
+    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+    if (totalPages <= 1) return null;
+
+    return (
+      <div className="flex items-center justify-between px-4 py-3 border-t border-border/30 bg-muted/5">
+        <div className="text-xs text-muted-foreground">
+          {t.adminPaginationShowing || "Showing"} {Math.min(totalItems, (currentPage - 1) * ITEMS_PER_PAGE + 1)}-{Math.min(totalItems, currentPage * ITEMS_PER_PAGE)} {t.adminPaginationOf || "of"} {totalItems}
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(currentPage - 1)}
+            className="h-8 px-2"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <Button
+                key={page}
+                variant={currentPage === page ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCurrentPage(page)}
+                className={`h-8 w-8 p-0 ${currentPage === page ? "bg-primary text-primary-foreground" : ""}`}
+              >
+                {page}
+              </Button>
+            ))}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage(currentPage + 1)}
+            className="h-8 px-2"
+          >
+            <ChevronLeft className="w-4 h-4 rotate-180" />
+          </Button>
+        </div>
+      </div>
+    );
   };
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [tab]);
 
   const handleOrderStatusChange = async (orderId: string, newStatus: string) => {
     const { error } = await supabase
@@ -177,7 +249,7 @@ const AdminPage = () => {
       .eq('id', orderId);
 
     if (!error) {
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus as Order['status'] } : o));
       setConfirmAction(null);
       toast({ title: t.settingsSaved });
     }
@@ -203,6 +275,10 @@ const AdminPage = () => {
     { id: "orders" as Tab, label: t.adminOrders, icon: ClipboardList },
     { id: "spaces" as Tab, label: t.adminSpaces, icon: Space },
     { id: "pricing" as Tab, label: t.adminPricing, icon: DollarSign },
+    { id: "services" as Tab, label: t.adminTabServices, icon: ClipboardList },
+    { id: "product_types" as Tab, label: t.adminTabProductTypes, icon: Package },
+    { id: "faqs" as Tab, label: t.adminTabFAQs, icon: MessageCircle },
+    { id: "content" as Tab, label: t.adminTabContent, icon: FileText },
     { id: "users" as Tab, label: t.adminUsers, icon: Users },
     { id: "settings" as Tab, label: t.adminSettings, icon: Settings },
   ];
@@ -401,12 +477,29 @@ const AdminPage = () => {
               <div><span className="text-xs text-muted-foreground">{t.adminOrderClient}</span><p className="text-sm font-medium text-foreground mt-1">{selectedOrderData.profiles?.company_name || selectedOrderData.profiles?.full_name || t.unknownClient}</p></div>
               <div><span className="text-xs text-muted-foreground">{t.adminOrderDate}</span><p className="text-sm font-medium text-foreground mt-1">{new Date(selectedOrderData.created_at).toLocaleDateString()}</p></div>
               <div><span className="text-xs text-muted-foreground">{t.adminOrderStorageType}</span><p className="text-sm font-medium text-foreground mt-1">{lang === 'ar' ? selectedOrderData.storage_types?.name_ar : selectedOrderData.storage_types?.name_en}</p></div>
-              <div><span className="text-xs text-muted-foreground">{t.adminOrderArea}</span><p className="text-sm font-medium text-foreground mt-1">{selectedOrderData.area} {t.sqm}</p></div>
+              <div><span className="text-xs text-muted-foreground">{t.adminOrderArea}</span><p className="text-sm font-medium text-foreground mt-1">{selectedOrderData.area} {selectedOrderData.storage_types?.billing_unit === 'sqm' ? t.sqm : (lang === 'ar' ? selectedOrderData.storage_types?.unit_name_ar : selectedOrderData.storage_types?.unit_name_en) || selectedOrderData.storage_types?.billing_unit || t.sqm}</p></div>
               <div><span className="text-xs text-muted-foreground">{t.adminOrderDuration}</span><p className="text-sm font-medium text-foreground mt-1">{selectedOrderData.duration_months} {t.nrMonth}</p></div>
               <div><span className="text-xs text-muted-foreground">{t.adminOrderTotal}</span><p className="text-sm font-bold text-emerald-400 mt-1">{formatPrice(selectedOrderData.total_price)}</p></div>
               <div><span className="text-xs text-muted-foreground">{t.adminOrderStatus}</span><p className="mt-1"><Badge className={`${statusColor(selectedOrderData.status)} border-none text-xs`}>{selectedOrderData.status.replace('_', ' ')}</Badge></p></div>
             </div>
           </div>
+
+          {/* Measurement Details */}
+          {selectedOrderData.measurement_data && Object.keys(selectedOrderData.measurement_data).length > 0 && (
+            <div className="glass rounded-xl p-6 space-y-4">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <Settings2 className="w-5 h-5 text-primary" /> {lang === 'ar' ? 'تفاصيل القياسات' : 'Measurement Details'}
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {Object.entries(selectedOrderData.measurement_data).map(([key, value]) => (
+                  <div key={key}>
+                    <span className="text-xs text-muted-foreground capitalize">{key.replace('_', ' ')}</span>
+                    <p className="text-sm font-medium text-foreground mt-1">{String(value)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Additional Services */}
           {selectedOrderData.extras && selectedOrderData.extras.length > 0 && (
@@ -429,6 +522,31 @@ const AdminPage = () => {
                 <FileText className="w-5 h-5 text-primary" /> {t.adminOrderNotes}
               </h3>
               <p className="text-sm text-muted-foreground">{selectedOrderData.notes}</p>
+            </div>
+          )}
+
+          {/* Photos */}
+          {selectedOrderData.product_images && selectedOrderData.product_images.length > 0 && (
+            <div className="glass rounded-xl p-6 space-y-4">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <Image className="w-5 h-5 text-primary" /> {t.adminOrderPhotos}
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                {selectedOrderData.product_images.map((url: string, i: number) => (
+                  <div key={i} className="relative group rounded-xl overflow-hidden aspect-square bg-muted/30 border border-border/50">
+                    <img 
+                      src={url} 
+                      alt={`${t.adminOrderPhotos} ${i + 1}`} 
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Button variant="ghost" size="icon" className="text-white" onClick={() => window.open(url, '_blank')}>
+                        <ExternalLink className="w-5 h-5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -464,7 +582,7 @@ const AdminPage = () => {
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div><span className="text-muted-foreground">{t.adminThClient}</span><p className="text-foreground mt-0.5">{o.profiles?.company_name || o.profiles?.full_name || t.unknownClient}</p></div>
                 <div><span className="text-muted-foreground">{t.adminThType}</span><p className="text-foreground mt-0.5">{lang === 'ar' ? o.storage_types?.name_ar : o.storage_types?.name_en}</p></div>
-                <div><span className="text-muted-foreground">{t.adminThArea}</span><p className="text-foreground mt-0.5">{o.area} {t.sqm}</p></div>
+                <div><span className="text-muted-foreground">{t.adminThArea}</span><p className="text-foreground mt-0.5">{o.area} {o.storage_types?.billing_unit === 'sqm' ? t.sqm : (lang === 'ar' ? o.storage_types?.unit_name_ar : o.storage_types?.unit_name_en) || o.storage_types?.billing_unit || t.sqm}</p></div>
                 <div><span className="text-muted-foreground">{t.adminThDuration}</span><p className="text-foreground mt-0.5">{o.duration_months} {t.nrMonth}</p></div>
               </div>
               <div className="flex items-center justify-between pt-1 border-t border-border/50">
@@ -475,6 +593,8 @@ const AdminPage = () => {
         </div>
       );
     }
+    const displayOrders = orders.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
     return (
       <div>
         <div className="flex items-center justify-between mb-6">
@@ -491,12 +611,12 @@ const AdminPage = () => {
               </tr>
             </thead>
             <tbody>
-              {orders.map((o) => (
+              {displayOrders.map((o) => (
                 <tr key={o.id} className="border-b border-border/50 hover:bg-muted/10 cursor-pointer transition-colors" onClick={() => setSelectedOrder(o.id)}>
                   <td className="p-4 font-medium text-primary text-sm">{o.id.split('-')[0].toUpperCase()}</td>
                   <td className="p-4 text-foreground text-sm">{o.profiles?.company_name || o.profiles?.full_name || t.unknownClient}</td>
                   <td className="p-4 text-muted-foreground text-sm">{lang === 'ar' ? o.storage_types?.name_ar : o.storage_types?.name_en}</td>
-                  <td className="p-4 text-muted-foreground text-sm">{o.area} {t.sqm}</td>
+                  <td className="p-4 text-muted-foreground text-sm">{o.area} {o.storage_types?.billing_unit === 'sqm' ? t.sqm : (lang === 'ar' ? o.storage_types?.unit_name_ar : o.storage_types?.unit_name_en) || o.storage_types?.billing_unit || t.sqm}</td>
                   <td className="p-4 text-muted-foreground text-sm">{o.duration_months} {t.nrMonth}</td>
                   <td className="p-4 text-foreground font-bold text-sm">{formatPrice(o.total_price)}</td>
                   <td className="p-4"><Badge className={`${statusColor(o.status)} border-none text-xs`}>{o.status.replace('_', ' ')}</Badge></td>
@@ -523,13 +643,19 @@ const AdminPage = () => {
 
   const handleAddSpace = () => {
     setEditingSpace(null);
-    setSpaceFormData({ name: "", nameAr: "", type: "", capacity: "" });
+    setSpaceFormData({ name: "", nameAr: "", type: "", capacity: "", capacityUnits: "" });
     setShowSpaceForm(true);
   };
 
-  const handleEditSpace = (s: any) => {
+  const handleEditSpace = (s: StorageSpace) => {
     setEditingSpace(s);
-    setSpaceFormData({ name: s.name_en, nameAr: s.name_ar, type: s.storage_type_id, capacity: s.capacity.toString() });
+    setSpaceFormData({ 
+      name: s.name_en, 
+      nameAr: s.name_ar, 
+      type: s.storage_type_id, 
+      capacity: s.capacity.toString(),
+      capacityUnits: (s.capacity_units || 0).toString()
+    });
     setShowSpaceForm(true);
   };
 
@@ -540,7 +666,8 @@ const AdminPage = () => {
       name_en: spaceFormData.name,
       name_ar: spaceFormData.nameAr,
       storage_type_id: spaceFormData.type,
-      capacity: parseInt(spaceFormData.capacity),
+      capacity: parseFloat(spaceFormData.capacity) || 0,
+      capacity_units: parseInt(spaceFormData.capacityUnits) || 0,
     };
 
     if (editingSpace) {
@@ -561,40 +688,224 @@ const AdminPage = () => {
         .single();
 
       if (!error && data) {
-        setSpaces(prev => [...prev, data as any]);
+        setSpaces(prev => [...prev, data as unknown as StorageSpace]);
         toast({ title: t.settingsSaved });
       }
     }
     setShowSpaceForm(false);
   };
 
-  const handleEditPricing = (p: any) => {
-    setEditingPricing(p);
+  const handleAddPricing = () => {
+    setEditingPricing(null);
     setPricingFormData({
-      price: p.price_per_sqm.toString(),
-      minArea: p.min_area.toString(),
-      minDuration: p.min_duration_months.toString()
+      price: "", minArea: "", minDuration: "", billingUnit: "sqm", unitEn: "", unitAr: "",
+      nameEn: "", nameAr: "", slug: "", descriptionEn: "", descriptionAr: "",
+      measurementConfig: JSON.stringify({
+        primary_unit: "unit",
+        fields: ["quantity"],
+        formula: { total: "quantity" }
+      }, null, 2)
+    });
+    setShowPricingForm(true);
+  };
+
+  const handleEditPricing = (p: PricingItem) => {
+    setEditingPricing(p.storage_types);
+    setPricingFormData({
+      price: (p.price_per_sqm_month || p.storage_types?.price_per_sqm_month || 0).toString(),
+      minArea: (p.min_area || p.storage_types?.min_area || 0).toString(),
+      minDuration: (p.min_duration_months || p.storage_types?.min_duration_months || 0).toString(),
+      billingUnit: p.storage_types?.billing_unit || "sqm",
+      unitEn: p.storage_types?.unit_name_en || "",
+      unitAr: p.storage_types?.unit_name_ar || "",
+      nameEn: p.storage_types?.name_en || "",
+      nameAr: p.storage_types?.name_ar || "",
+      slug: p.storage_types?.slug || "",
+      descriptionEn: p.storage_types?.description_en || "",
+      descriptionAr: p.storage_types?.description_ar || "",
+      measurementConfig: p.storage_types?.measurement_config ? JSON.stringify(p.storage_types.measurement_config, null, 2) : ""
     });
     setShowPricingForm(true);
   };
 
   const handleSavePricing = async () => {
-    if (!editingPricing) return;
-    
-    const { error } = await supabase
-      .from('storage_types')
-      .update({
-        price_per_sqm_month: parseFloat(pricingFormData.price),
-        min_area: parseFloat(pricingFormData.minArea),
-        min_duration_months: parseInt(pricingFormData.minDuration)
-      })
-      .eq('id', editingPricing.id);
-
-    if (!error) {
-      setTypes(prev => prev.map(t => t.id === editingPricing.id ? { ...t, price_per_sqm_month: parseFloat(pricingFormData.price), min_area: parseFloat(pricingFormData.minArea), min_duration_months: parseInt(pricingFormData.minDuration) } : t));
-      toast({ title: t.settingsSaved });
-      setShowPricingForm(false);
+    let mConfig = null;
+    try {
+      if (pricingFormData.measurementConfig) {
+        mConfig = JSON.parse(pricingFormData.measurementConfig);
+      }
+    } catch (e) {
+      toast({ title: "Invalid JSON in Measurement Config", variant: "destructive" });
+      return;
     }
+
+    const data = {
+      name_en: pricingFormData.nameEn,
+      name_ar: pricingFormData.nameAr,
+      slug: pricingFormData.slug || pricingFormData.nameEn.toLowerCase().replace(/\s+/g, '-'),
+      description_en: pricingFormData.descriptionEn,
+      description_ar: pricingFormData.descriptionAr,
+      price_per_sqm_month: parseFloat(pricingFormData.price) || 0,
+      min_area: parseFloat(pricingFormData.minArea) || 0,
+      min_duration_months: parseInt(pricingFormData.minDuration) || 1,
+      billing_unit: pricingFormData.billingUnit,
+      unit_name_en: pricingFormData.unitEn,
+      unit_name_ar: pricingFormData.unitAr,
+      measurement_config: mConfig
+    };
+
+    if (editingPricing) {
+      const { error } = await supabase
+        .from('storage_types')
+        .update(data)
+        .eq('id', editingPricing.id);
+
+      if (!error) {
+        setTypes(prev => prev.map(t => t.id === editingPricing.id ? { ...t, ...data, billing_unit: data.billing_unit as StorageType['billing_unit'] } : t));
+        toast({ title: t.settingsSaved });
+        setShowPricingForm(false);
+      } else {
+        toast({ title: "Error saving pricing", description: error.message, variant: "destructive" });
+      }
+    } else {
+      const { data: newType, error } = await supabase
+        .from('storage_types')
+        .insert([data])
+        .select()
+        .single();
+
+      if (!error && newType) {
+        setTypes(prev => [...prev, newType as StorageType]);
+        toast({ title: t.settingsSaved });
+        setShowPricingForm(false);
+      } else {
+        toast({ title: "Error adding storage type", description: error?.message, variant: "destructive" });
+      }
+    }
+  };
+
+  // ─── New Content Handlers ───
+  const handleSaveService = async () => {
+    const data = {
+      title_en: serviceFormData.titleEn,
+      title_ar: serviceFormData.titleAr,
+      description_en: serviceFormData.descEn,
+      description_ar: serviceFormData.descAr,
+      price: parseFloat(serviceFormData.price) || 0,
+      icon_name: serviceFormData.icon
+    };
+
+    if (editingService) {
+      const { error } = await supabase.from('services').update(data).eq('id', editingService.id);
+      if (!error) {
+        setServices(prev => prev.map(s => s.id === editingService.id ? { ...s, ...data } : s));
+        toast({ title: t.settingsSaved });
+      }
+    } else {
+      const { data: inserted, error } = await supabase.from('services').insert([data]).select().single();
+      if (!error && inserted) {
+        setServices(prev => [inserted as Service, ...prev]);
+        toast({ title: t.settingsSaved });
+      }
+    }
+    setShowServiceForm(false);
+  };
+
+  const handleDeleteService = async (id: string) => {
+    const { error } = await supabase.from('services').delete().eq('id', id);
+    if (!error) {
+      setServices(prev => prev.filter(s => s.id !== id));
+      toast({ title: t.settingsSaved });
+    }
+  };
+
+  const handleSaveFAQ = async () => {
+    const data = {
+      question_en: faqFormData.qEn,
+      question_ar: faqFormData.qAr,
+      answer_en: faqFormData.aEn,
+      answer_ar: faqFormData.aAr,
+      category: faqFormData.category
+    };
+
+    if (editingFAQ) {
+      const { error } = await supabase.from('faqs').update(data).eq('id', editingFAQ.id);
+      if (!error) {
+        setFaqs(prev => prev.map(f => f.id === editingFAQ.id ? { ...f, ...data } : f));
+        toast({ title: t.settingsSaved });
+      }
+    } else {
+      const { data: inserted, error } = await supabase.from('faqs').insert([data]).select().single();
+      if (!error && inserted) {
+        setFaqs(prev => [inserted as FAQ, ...prev]);
+        toast({ title: t.settingsSaved });
+      }
+    }
+    setShowFAQForm(false);
+  };
+
+  const handleDeleteFAQ = async (id: string) => {
+    const { error } = await supabase.from('faqs').delete().eq('id', id);
+    if (!error) {
+      setFaqs(prev => prev.filter(f => f.id !== id));
+      toast({ title: t.settingsSaved });
+    }
+  };
+
+  const handleSavePt = async () => {
+    const data = {
+      name_en: ptFormData.nameEn,
+      name_ar: ptFormData.nameAr
+    };
+
+    if (editingPt) {
+      const { error } = await supabase.from('product_types').update(data).eq('id', editingPt.id);
+      if (!error) {
+        setProductTypes(prev => prev.map(p => p.id === editingPt.id ? { ...p, ...data } : p));
+        toast({ title: t.settingsSaved });
+      }
+    } else {
+      const { data: inserted, error } = await supabase.from('product_types').insert([data]).select().single();
+      if (!error && inserted) {
+        setProductTypes(prev => [inserted as ProductType, ...prev]);
+        toast({ title: t.settingsSaved });
+      }
+    }
+    setShowPtForm(false);
+  };
+
+  const handleDeletePt = async (id: string) => {
+    const { error } = await supabase.from('product_types').delete().eq('id', id);
+    if (!error) {
+      setProductTypes(prev => prev.filter(p => p.id !== id));
+      toast({ title: t.settingsSaved });
+    }
+  };
+
+  const handleSaveContent = async () => {
+    const data = {
+      slug: contentFormData.slug,
+      title_en: contentFormData.titleEn,
+      title_ar: contentFormData.titleAr,
+      content_en: contentFormData.contentEn,
+      content_ar: contentFormData.contentAr,
+      updated_at: new Date().toISOString()
+    };
+
+    if (editingContent) {
+      const { error } = await supabase.from('content_pages').update(data).eq('id', editingContent.id);
+      if (!error) {
+        setContentPages(prev => prev.map(p => p.id === editingContent.id ? { ...p, ...data } : p));
+        toast({ title: t.settingsSaved });
+      }
+    } else {
+      const { data: inserted, error } = await supabase.from('content_pages').insert([data]).select().single();
+      if (!error && inserted) {
+        setContentPages(prev => [inserted as ContentPage, ...prev]);
+        toast({ title: t.settingsSaved });
+      }
+    }
+    setShowContentForm(false);
   };
 
   // ─── Space Details View ───
@@ -737,9 +1048,15 @@ const AdminPage = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">{t.adminCapacity}</label>
-              <Input value={spaceFormData.capacity} onChange={e => setSpaceFormData({ ...spaceFormData, capacity: e.target.value })} placeholder={`100 ${t.adminSqm}`} />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">{t.adminCapacity} ({t.adminSqm || "Area"})</label>
+                <Input type="number" value={spaceFormData.capacity} onChange={e => setSpaceFormData({ ...spaceFormData, capacity: e.target.value })} placeholder={`100 ${t.adminSqm}`} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">{t.adminCapacityUnits || "Units Count"}</label>
+                <Input type="number" value={spaceFormData.capacityUnits} onChange={e => setSpaceFormData({ ...spaceFormData, capacityUnits: e.target.value })} placeholder="e.g. 50" />
+              </div>
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
@@ -754,26 +1071,102 @@ const AdminPage = () => {
   const PricingFormModal = () => {
     if (!showPricingForm) return null;
     return (
-      <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setShowPricingForm(false)}>
-        <div className="bg-card rounded-xl p-6 w-full max-w-md space-y-4 border border-border" onClick={e => e.stopPropagation()}>
-          <h3 className="font-bold text-foreground text-base">{t.adminEditPricingTitle || "Edit Pricing"}</h3>
-          <div className="space-y-3">
+      <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-y-auto" onClick={() => setShowPricingForm(false)}>
+        <div className="bg-card rounded-xl p-6 w-full max-w-2xl space-y-4 border border-border my-8" onClick={e => e.stopPropagation()}>
+          <h3 className="font-bold text-foreground text-lg">{editingPricing ? t.adminEditPricingTitle || "Edit Storage Type" : "Add New Storage Type"}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">{t.adminThPricePerSqm}</label>
+              <label className="text-xs text-muted-foreground">{t.adminNameEn || "Name (EN)"}</label>
+              <Input value={pricingFormData.nameEn} onChange={e => setPricingFormData({ ...pricingFormData, nameEn: e.target.value })} placeholder="Floor Storage" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{t.adminNameAr || "Name (AR)"}</label>
+              <Input value={pricingFormData.nameAr} onChange={e => setPricingFormData({ ...pricingFormData, nameAr: e.target.value })} placeholder="مساحة أرضية" dir="rtl" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{t.adminSlug || "URL Slug"}</label>
+              <Input value={pricingFormData.slug} onChange={e => setPricingFormData({ ...pricingFormData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })} placeholder="floor-storage" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{t.adminThPricePerUnit || "Price / Unit"}</label>
               <Input type="number" value={pricingFormData.price} onChange={e => setPricingFormData({ ...pricingFormData, price: e.target.value })} />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">{t.adminThMinArea}</label>
+              <label className="text-xs text-muted-foreground">{t.adminThMinArea || "Min Area"}</label>
               <Input type="number" value={pricingFormData.minArea} onChange={e => setPricingFormData({ ...pricingFormData, minArea: e.target.value })} />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">{t.adminThMinDuration}</label>
+              <label className="text-xs text-muted-foreground">{t.adminThMinDuration || "Min Duration (Months)"}</label>
               <Input type="number" value={pricingFormData.minDuration} onChange={e => setPricingFormData({ ...pricingFormData, minDuration: e.target.value })} />
             </div>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="ghost" onClick={() => setShowPricingForm(false)}>{t.adminCancel}</Button>
-            <Button onClick={handleSavePricing}>{t.adminSave}</Button>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{t.adminBillingUnit || "Billing Unit"}</label>
+              <Select value={pricingFormData.billingUnit} onValueChange={v => setPricingFormData({ ...pricingFormData, billingUnit: v })}>
+                <SelectTrigger className="glass"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sqm">{t.unitSqm || "Square Meter (sqm)"}</SelectItem>
+                  <SelectItem value="sqft">Square Foot (sqft)</SelectItem>
+                  <SelectItem value="cbm">Cubic Meter (cbm)</SelectItem>
+                  <SelectItem value="box">Box</SelectItem>
+                  <SelectItem value="shelf">Shelf</SelectItem>
+                  <SelectItem value="pallet">Pallet</SelectItem>
+                  <SelectItem value="unit">Unit / Piece</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {pricingFormData.billingUnit !== "sqm" && (
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">Unit (EN)</label>
+                  <Input value={pricingFormData.unitEn} onChange={e => setPricingFormData({ ...pricingFormData, unitEn: e.target.value })} placeholder="Box" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">Unit (AR)</label>
+                  <Input value={pricingFormData.unitAr} onChange={e => setPricingFormData({ ...pricingFormData, unitAr: e.target.value })} placeholder="صندوق" dir="rtl" />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs text-muted-foreground">Measurement Config (JSON)</label>
+            <textarea 
+              className="w-full h-48 bg-background/50 border border-border rounded-lg p-3 font-mono text-xs focus:ring-2 focus:ring-primary/30 outline-none"
+              value={pricingFormData.measurementConfig}
+              onChange={e => setPricingFormData({ ...pricingFormData, measurementConfig: e.target.value })}
+              placeholder='{"primary_unit": "m2", "fields": ["length", "width"]}'
+            />
+            <p className="text-[10px] text-muted-foreground">Defines inputs (fields) and calculation formulas.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{t.adminDescriptionEn || "Description (EN)"}</label>
+              <textarea 
+                className="w-full h-24 bg-background/50 border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                value={pricingFormData.descriptionEn}
+                onChange={e => setPricingFormData({ ...pricingFormData, descriptionEn: e.target.value })}
+                placeholder="Brief description for English users"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground">{t.adminDescriptionAr || "Description (AR)"}</label>
+              <textarea 
+                className="w-full h-24 bg-background/50 border border-border rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary/30 outline-none"
+                value={pricingFormData.descriptionAr}
+                onChange={e => setPricingFormData({ ...pricingFormData, descriptionAr: e.target.value })}
+                dir="rtl"
+                placeholder="وصف مختصر للمستخدمين بالعربية"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4 border-t border-border mt-2">
+            <Button className="flex-1 h-11" onClick={handleSavePricing}>{t.adminSave}</Button>
+            <Button variant="outline" className="flex-1 h-11 text-muted-foreground" onClick={() => setShowPricingForm(false)}>{t.adminCancel}</Button>
           </div>
         </div>
       </div>
@@ -784,6 +1177,8 @@ const AdminPage = () => {
   const SpacesContent = () => {
     if (selectedSpace) return SpaceDetailsContent();
 
+    const displaySpaces = spaces.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
     return (
       <div>
         <div className="flex items-center justify-between mb-4 md:mb-6">
@@ -793,7 +1188,7 @@ const AdminPage = () => {
           </Button>
         </div>
         <div className="grid sm:grid-cols-2 gap-4 md:gap-6">
-          {spaces.map((s) => (
+          {displaySpaces.map((s) => (
             <div key={s.id} className={`glass rounded-xl p-4 md:p-6 cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all ${!s.is_active ? "opacity-60" : ""}`}
               onClick={() => setSelectedSpace(s.id)}>
               <div className="flex items-center justify-between mb-3 md:mb-4">
@@ -804,8 +1199,14 @@ const AdminPage = () => {
               </div>
               <div className="grid grid-cols-2 gap-3 md:gap-4 text-xs md:text-sm mb-3 md:mb-4">
                 <div><span className="text-muted-foreground">{t.adminSpaceType}</span> <span className="text-foreground font-medium">{types.find(t => t.id === s.storage_type_id)?.name_en || '...'}</span></div>
-                <div><span className="text-muted-foreground">{t.adminSpaceCapacity}</span> <span className="text-foreground font-medium">{s.capacity} {t.sqm}</span></div>
-                <div><span className="text-muted-foreground">{t.adminSpaceUsed}</span> <span className="text-foreground font-medium">{s.used_capacity} {t.sqm}</span></div>
+                <div>
+                  <span className="text-muted-foreground">{t.adminSpaceCapacity}</span> 
+                  <span className="text-foreground font-medium">
+                    {s.capacity} {t.sqm} 
+                    {s.capacity_units ? ` (${s.capacity_units} ${lang === "ar" ? types.find(t => t.id === s.storage_type_id)?.unit_name_ar || "وحدة" : types.find(t => t.id === s.storage_type_id)?.unit_name_en || "units"})` : ""}
+                  </span>
+                </div>
+                <div><span className="text-muted-foreground">{t.adminSpaceUsed}</span> <span className="text-foreground font-medium">{s.used_capacity} {t.sqm} {s.used_units ? `(${s.used_units})` : ""}</span></div>
                 <div><span className="text-muted-foreground">{t.adminSpaceOccupancy}</span> <span className="text-primary font-bold">{Math.round((s.used_capacity / s.capacity) * 100)}%</span></div>
               </div>
               <div className="h-2 md:h-3 bg-muted rounded-full overflow-hidden mb-3">
@@ -830,6 +1231,7 @@ const AdminPage = () => {
             </div>
           ))}
         </div>
+        <PaginationControls totalItems={spaces.length} currentPage={currentPage} setCurrentPage={setCurrentPage} />
         {SpaceFormModal()}
         {PricingFormModal()}
       </div>
@@ -841,19 +1243,21 @@ const AdminPage = () => {
     const pricing = types.map(type => ({
       id: type.id,
       storage_types: type,
-      price_per_sqm: type.price_per_sqm || 0,
+      price_per_sqm_month: type.price_per_sqm_month || 0,
       min_area: type.min_area || 0,
       min_duration_months: type.min_duration_months || 1
     }));
+    const displayPricing = pricing.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
     if (isMobile) {
       return (
         <div className="space-y-3">
           <h2 className="text-base font-bold text-foreground">{t.adminManagePricing}</h2>
-          {pricing.map((p) => (
+          {displayPricing.map((p) => (
             <div key={p.id} className="glass rounded-xl p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-medium text-foreground text-sm">{lang === 'ar' ? p.storage_types.name_ar : p.storage_types.name_en}</span>
-                <span className="text-primary font-bold text-sm">{formatPrice(p.price_per_sqm)}</span>
+                <span className="text-primary font-bold text-sm">{formatPrice(p.price_per_sqm_month)}</span>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div><span className="text-muted-foreground">{t.adminThMinArea}</span><p className="text-foreground mt-0.5">{p.min_area} {t.adminSqm}</p></div>
@@ -862,26 +1266,36 @@ const AdminPage = () => {
               <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 text-xs w-full" onClick={() => handleEditPricing(p)}>{t.adminEdit}</Button>
             </div>
           ))}
+          <PaginationControls totalItems={pricing.length} currentPage={currentPage} setCurrentPage={setCurrentPage} />
         </div>
       );
     }
     return (
       <div>
-        <h2 className="text-xl font-bold text-foreground mb-6">{t.adminManagePricing}</h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-foreground">{t.adminManagePricing}</h2>
+          <Button onClick={handleAddPricing} className="gap-1.5" size={isMobile ? "sm" : "default"}>
+            <Plus className="w-4 h-4" />{t.adminAddPricing || "Add Storage Type"}
+          </Button>
+        </div>
         <div className="glass rounded-xl overflow-hidden">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">
-                {[t.adminThStorageType, t.adminThPricePerSqm, t.adminThMinArea, t.adminThMinDuration, t.adminThActions].map((h) => (
+                {[t.adminThStorageType, t.adminThPricePerUnit || "Price / Unit", t.adminThBillingUnit || "Unit", t.adminThMinArea, t.adminThMinDuration, t.adminThActions].map((h) => (
                   <th key={h} className={`${textAlign} p-4 text-sm font-medium text-muted-foreground`}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {pricing.map((p) => (
+              {displayPricing.map((p) => (
                 <tr key={p.id} className="border-b border-border/50 hover:bg-muted/10">
                   <td className="p-4 font-medium text-foreground text-sm">{lang === 'ar' ? p.storage_types.name_ar : p.storage_types.name_en}</td>
-                  <td className="p-4 text-primary font-bold text-sm">{formatPrice(p.price_per_sqm)}</td>
+                  <td className="p-4 text-primary font-bold text-sm">
+                    {formatPrice(p.price_per_sqm_month)} 
+                    <span className="text-[10px] text-muted-foreground font-normal ml-1">/ {lang === "ar" ? p.storage_types.unit_name_ar || t.adminSqm : p.storage_types.unit_name_en || "sqm"}</span>
+                  </td>
+                  <td className="p-4 text-muted-foreground text-sm font-mono uppercase">{p.storage_types.billing_unit || "sqm"}</td>
                   <td className="p-4 text-muted-foreground text-sm">{p.min_area} {t.adminSqm}</td>
                   <td className="p-4 text-muted-foreground text-sm">{p.min_duration_months} {t.adminMonth}</td>
                   <td className="p-4"><Button variant="ghost" size="sm" className="text-primary hover:text-primary/80" onClick={() => handleEditPricing(p)}>{t.adminEdit}</Button></td>
@@ -889,6 +1303,7 @@ const AdminPage = () => {
               ))}
             </tbody>
           </table>
+          <PaginationControls totalItems={pricing.length} currentPage={currentPage} setCurrentPage={setCurrentPage} />
         </div>
       </div>
     );
@@ -897,6 +1312,8 @@ const AdminPage = () => {
   // ─── Users ───
   const UsersContent = () => {
     const selectedUserData = selectedUser ? profiles.find(u => u.id === selectedUser) : null;
+    const userOrders = selectedUser ? orders.filter(o => o.user_id === selectedUser) : [];
+    const displayUserOrders = userOrders.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
     // User Details View
     if (selectedUserData) {
@@ -927,7 +1344,7 @@ const AdminPage = () => {
             </h3>
             {isMobile ? (
               <div className="space-y-3">
-                {orders.filter(o => o.user_id === selectedUser).map(o => (
+                {displayUserOrders.map(o => (
                   <div key={o.id} className="bg-muted/20 rounded-lg p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="font-mono text-xs text-primary">{o.id.split('-')[0].toUpperCase()}</span>
@@ -942,6 +1359,7 @@ const AdminPage = () => {
                     <div className="text-[10px] text-muted-foreground">{t.thDate}: {new Date(o.created_at).toLocaleDateString()}</div>
                   </div>
                 ))}
+                <PaginationControls totalItems={userOrders.length} currentPage={currentPage} setCurrentPage={setCurrentPage} />
               </div>
             ) : (
               <div className="overflow-hidden rounded-lg">
@@ -954,7 +1372,7 @@ const AdminPage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.filter(o => o.user_id === selectedUser).map(o => (
+                    {displayUserOrders.map(o => (
                       <tr key={o.id} className="border-b border-border/30 hover:bg-muted/10">
                         <td className="p-3 font-mono text-xs text-primary">{o.id.split('-')[0].toUpperCase()}</td>
                         <td className="p-3 text-sm text-foreground">{lang === 'ar' ? o.storage_types?.name_ar : o.storage_types?.name_en}</td>
@@ -967,6 +1385,7 @@ const AdminPage = () => {
                     ))}
                   </tbody>
                 </table>
+                <PaginationControls totalItems={userOrders.length} currentPage={currentPage} setCurrentPage={setCurrentPage} />
               </div>
             )}
           </div>
@@ -975,11 +1394,25 @@ const AdminPage = () => {
     }
 
     // Users List View
+    const filteredProfiles = profiles.filter(u => !searchQuery || u.full_name.toLowerCase().includes(searchQuery.toLowerCase()) || u.email.toLowerCase().includes(searchQuery.toLowerCase()));
+    const displayUsers = filteredProfiles.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
     if (isMobile) {
       return (
         <div className="space-y-3">
-          <h2 className="text-base font-bold text-foreground">{t.adminManageUsers}</h2>
-          {profiles.map((u) => (
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-base font-bold text-foreground">{t.adminManageUsers}</h2>
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input 
+                placeholder={t.adminSearch} 
+                className="ps-9 h-9 text-xs w-48 glass border-border/50"
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+              />
+            </div>
+          </div>
+          {displayUsers.map((u) => (
             <div key={u.id} className="glass rounded-xl p-4 space-y-2 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setSelectedUser(u.id)}>
               <div className="flex items-center justify-between">
                 <span className="font-medium text-foreground text-sm">{u.full_name}</span>
@@ -992,12 +1425,24 @@ const AdminPage = () => {
               <div className="text-[10px] text-muted-foreground">{t.adminThJoinDate}: {new Date(u.created_at).toLocaleDateString()}</div>
             </div>
           ))}
+          <PaginationControls totalItems={filteredProfiles.length} currentPage={currentPage} setCurrentPage={setCurrentPage} />
         </div>
       );
     }
     return (
       <div>
-        <h2 className="text-xl font-bold text-foreground mb-6">{t.adminManageUsers}</h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-foreground">{t.adminManageUsers}</h2>
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input 
+              placeholder={t.adminSearch} 
+              className="ps-9 h-10 text-sm w-64 glass border-border/50"
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+            />
+          </div>
+        </div>
         <div className="glass rounded-xl overflow-hidden">
           <table className="w-full">
             <thead>
@@ -1008,7 +1453,7 @@ const AdminPage = () => {
               </tr>
             </thead>
             <tbody>
-              {profiles.map((u) => (
+              {displayUsers.map((u) => (
                 <tr key={u.id} className="border-b border-border/50 hover:bg-muted/10 cursor-pointer transition-colors" onClick={() => setSelectedUser(u.id)}>
                   <td className="p-4 font-medium text-foreground text-sm">{u.full_name}</td>
                   <td className="p-4 text-muted-foreground text-sm">{u.email}</td>
@@ -1020,6 +1465,198 @@ const AdminPage = () => {
             </tbody>
           </table>
         </div>
+      </div>
+    );
+  };
+
+  // ─── Services ───
+  const ServicesContent = () => {
+    const displayServices = services.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+    
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base md:text-xl font-bold text-foreground">{t.adminTabServices}</h2>
+          <Button onClick={() => { setEditingService(null); setServiceFormData({ titleEn: "", titleAr: "", descEn: "", descAr: "", price: "", icon: "Package" }); setShowServiceForm(true); }} className="gap-1.5" size={isMobile ? "sm" : "default"}>
+            <Plus className="w-4 h-4" />{t.adminTabServices}
+          </Button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          {displayServices.map((s) => (
+            <div key={s.id} className="glass rounded-xl p-4 md:p-6 space-y-4 flex flex-col">
+              <div className="flex items-start justify-between">
+                <div className="bg-primary/20 p-3 rounded-xl">
+                  <Package className="w-5 h-5 md:w-6 md:h-6 text-primary" />
+                </div>
+                <div className="flex gap-1 md:gap-2">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingService(s); setServiceFormData({ titleEn: s.title_en, titleAr: s.title_ar, descEn: s.description_en, descAr: s.description_ar, price: s.price.toString(), icon: s.icon_name || "Package" }); setShowServiceForm(true); }}>
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDeleteService(s.id)}>
+                    <MoreVertical className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-sm md:text-lg text-foreground mb-1 md:mb-2">{lang === "ar" ? s.title_ar : s.title_en}</h3>
+                <p className="text-xs md:text-sm text-muted-foreground line-clamp-3">{lang === "ar" ? s.description_ar : s.description_en}</p>
+              </div>
+              <div className="pt-3 md:pt-4 border-t border-border flex items-center justify-between">
+                <span className="font-bold text-sm md:text-base text-primary">{formatPrice(s.price)}</span>
+              </div>
+            </div>
+          ))}
+          {services.length === 0 && (
+            <div className="col-span-full py-12 text-center glass rounded-xl">
+              <p className="text-muted-foreground">{t.adminNoData || "No services found"}</p>
+            </div>
+          )}
+        </div>
+        <PaginationControls totalItems={services.length} currentPage={currentPage} setCurrentPage={setCurrentPage} />
+      </div>
+    );
+  };
+
+  // ─── Product Types ───
+  const ProductTypesContent = () => {
+    const displayPt = productTypes.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+    
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base md:text-xl font-bold text-foreground">{t.adminTabProductTypes}</h2>
+          <Button onClick={() => { setEditingPt(null); setPtFormData({ nameEn: "", nameAr: "" }); setShowPtForm(true); }} className="gap-1.5" size={isMobile ? "sm" : "default"}>
+            <Plus className="w-4 h-4" />{t.adminTabProductTypes}
+          </Button>
+        </div>
+        <div className="glass rounded-xl overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border">
+                <th className={`${textAlign} p-3 md:p-4 text-xs md:text-sm font-medium text-muted-foreground`}>{lang === "ar" ? "الاسم بالعربية" : "Name (AR)"}</th>
+                <th className={`${textAlign} p-3 md:p-4 text-xs md:text-sm font-medium text-muted-foreground`}>{lang === "ar" ? "الاسم بالإنجليزية" : "Name (EN)"}</th>
+                <th className="p-3 md:p-4 text-xs md:text-sm font-medium text-muted-foreground"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {displayPt.map((pt) => (
+                <tr key={pt.id} className="border-b border-border/50 hover:bg-muted/10 transition-colors">
+                  <td className="p-3 md:p-4 text-xs md:text-sm text-foreground font-medium">{pt.name_ar}</td>
+                  <td className="p-3 md:p-4 text-xs md:text-sm text-foreground font-medium">{pt.name_en}</td>
+                  <td className="p-3 md:p-4 text-right">
+                    <div className="flex justify-end gap-1 md:gap-2">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingPt(pt); setPtFormData({ nameEn: pt.name_en, nameAr: pt.name_ar }); setShowPtForm(true); }}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeletePt(pt.id)}>
+                        <MoreVertical className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {productTypes.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="p-8 text-center text-muted-foreground">{t.adminNoData}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <PaginationControls totalItems={productTypes.length} currentPage={currentPage} setCurrentPage={setCurrentPage} />
+      </div>
+    );
+  };
+
+  // ─── FAQS ───
+  const FAQContent = () => {
+    const displayFaqs = faqs.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+    
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base md:text-xl font-bold text-foreground">{t.adminTabFAQs}</h2>
+          <Button onClick={() => { setEditingFAQ(null); setFaqFormData({ qEn: "", qAr: "", aEn: "", aAr: "", category: "General" }); setShowFAQForm(true); }} className="gap-1.5" size={isMobile ? "sm" : "default"}>
+            <Plus className="w-4 h-4" />{t.adminTabFAQs}
+          </Button>
+        </div>
+        <div className="grid gap-4">
+          {displayFaqs.map((f) => (
+            <div key={f.id} className="glass rounded-xl p-4 md:p-6 space-y-3 md:space-y-4">
+              <div className="flex justify-between items-start">
+                <div className="space-y-1">
+                  <Badge variant="outline" className="text-[10px] uppercase tracking-wider">{f.category}</Badge>
+                  <h3 className="font-bold text-sm md:text-lg text-foreground">{lang === "ar" ? f.question_ar : f.question_en}</h3>
+                </div>
+                <div className="flex gap-1 md:gap-2">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingFAQ(f); setFaqFormData({ qEn: f.question_en, qAr: f.question_ar, aEn: f.answer_en, aAr: f.answer_ar, category: f.category }); setShowFAQForm(true); }}>
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteFAQ(f.id)}>
+                    <MoreVertical className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs md:text-sm text-muted-foreground">{lang === "ar" ? f.answer_ar : f.answer_en}</p>
+            </div>
+          ))}
+          {faqs.length === 0 && (
+            <div className="py-12 text-center glass rounded-xl">
+              <p className="text-muted-foreground">{t.adminNoData}</p>
+            </div>
+          )}
+        </div>
+        <PaginationControls totalItems={faqs.length} currentPage={currentPage} setCurrentPage={setCurrentPage} />
+      </div>
+    );
+  };
+
+  // ─── Content Pages ───
+  const ContentPagesContent = () => {
+    const displayContent = contentPages.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base md:text-xl font-bold text-foreground">{t.adminTabContent}</h2>
+          <Button onClick={() => { setEditingContent(null); setContentFormData({ slug: "", titleEn: "", titleAr: "", contentEn: "", contentAr: "" }); setShowContentForm(true); }} className="gap-1.5" size={isMobile ? "sm" : "default"}>
+            <Plus className="w-4 h-4" />{t.adminTabContent}
+          </Button>
+        </div>
+        <div className="glass rounded-xl overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border">
+                <th className={`${textAlign} p-3 md:p-4 text-xs md:text-sm font-medium text-muted-foreground`}>{lang === "ar" ? "الصفحة" : "Page"}</th>
+                <th className={`${textAlign} p-3 md:p-4 text-xs md:text-sm font-medium text-muted-foreground`}>{lang === "ar" ? "الرابط" : "Slug"}</th>
+                <th className={`${textAlign} p-3 md:p-4 text-xs md:text-sm font-medium text-muted-foreground`}>{lang === "ar" ? "آخر تحديث" : "Last Updated"}</th>
+                <th className="p-3 md:p-4 text-xs md:text-sm font-medium text-muted-foreground"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {displayContent.map((p) => (
+                <tr key={p.id} className="border-b border-border/50 hover:bg-muted/10 transition-colors">
+                  <td className="p-3 md:p-4 text-xs md:text-sm text-foreground font-medium">{lang === "ar" ? p.title_ar : p.title_en}</td>
+                  <td className="p-3 md:p-4 text-xs text-muted-foreground">/{p.slug}</td>
+                  <td className="p-3 md:p-4 text-xs text-muted-foreground">{new Date(p.updated_at).toLocaleDateString()}</td>
+                  <td className="p-3 md:p-4 text-right">
+                    <div className="flex justify-end gap-1 md:gap-2">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingContent(p); setContentFormData({ slug: p.slug, titleEn: p.title_en, titleAr: p.title_ar, contentEn: p.content_en, contentAr: p.content_ar }); setShowContentForm(true); }}>
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {contentPages.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="p-8 text-center text-muted-foreground">{t.adminNoData}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <PaginationControls totalItems={contentPages.length} currentPage={currentPage} setCurrentPage={setCurrentPage} />
       </div>
     );
   };
@@ -1163,6 +1800,8 @@ const AdminPage = () => {
     );
   };
 
+
+
   // ─── Loading & Auth Access Control ───
   if (authLoading || loading) {
     return <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -1195,6 +1834,10 @@ const AdminPage = () => {
           {tab === "orders" && <OrdersContent />}
           {tab === "spaces" && <SpacesContent />}
           {tab === "pricing" && <PricingContent />}
+          {tab === "services" && <ServicesContent />}
+          {tab === "product_types" && <ProductTypesContent />}
+          {tab === "faqs" && <FAQContent />}
+          {tab === "content" && <ContentPagesContent />}
           {tab === "users" && <UsersContent />}
           {tab === "settings" && <SettingsContent />}
         </main>
@@ -1276,6 +1919,10 @@ const AdminPage = () => {
           {tab === "orders" && OrdersContent()}
           {tab === "spaces" && SpacesContent()}
           {tab === "pricing" && PricingContent()}
+          {tab === "services" && ServicesContent()}
+          {tab === "product_types" && ProductTypesContent()}
+          {tab === "faqs" && FAQContent()}
+          {tab === "content" && ContentPagesContent()}
           {tab === "users" && UsersContent()}
           {tab === "settings" && SettingsContent()}
         </main>
@@ -1297,6 +1944,136 @@ const AdminPage = () => {
                 >
                   {t.adminConfirm}
                 </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Service Form Modal */}
+        {showServiceForm && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-auto">
+            <div className="bg-card rounded-xl p-6 w-full max-w-lg space-y-4 border border-border">
+              <h3 className="font-bold text-foreground text-lg">{editingService ? t.adminTabServices : t.adminTabServices}</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">Title (EN)</label>
+                  <Input value={serviceFormData.titleEn} onChange={e => setServiceFormData({...serviceFormData, titleEn: e.target.value})} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">Title (AR)</label>
+                  <Input value={serviceFormData.titleAr} onChange={e => setServiceFormData({...serviceFormData, titleAr: e.target.value})} />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">Description (EN)</label>
+                <textarea className="w-full bg-muted/20 border border-border rounded-lg p-2 text-sm" rows={3} value={serviceFormData.descEn} onChange={e => setServiceFormData({...serviceFormData, descEn: e.target.value})} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">Description (AR)</label>
+                <textarea className="w-full bg-muted/20 border border-border rounded-lg p-2 text-sm" rows={3} value={serviceFormData.descAr} onChange={e => setServiceFormData({...serviceFormData, descAr: e.target.value})} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">Price</label>
+                  <Input type="number" value={serviceFormData.price} onChange={e => setServiceFormData({...serviceFormData, price: e.target.value})} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">Icon (Lucide name)</label>
+                  <Input value={serviceFormData.icon} onChange={e => setServiceFormData({...serviceFormData, icon: e.target.value})} />
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end pt-4">
+                <Button variant="outline" onClick={() => setShowServiceForm(false)}>{t.adminCancel}</Button>
+                <Button onClick={handleSaveService}>{t.settingsSave}</Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Product Type Modal */}
+        {showPtForm && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-card rounded-xl p-6 w-full max-w-sm space-y-4 border border-border">
+              <h3 className="font-bold text-foreground text-lg">{t.adminTabProductTypes}</h3>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">Name (EN)</label>
+                <Input value={ptFormData.nameEn} onChange={e => setPtFormData({...ptFormData, nameEn: e.target.value})} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">Name (AR)</label>
+                <Input value={ptFormData.nameAr} onChange={e => setPtFormData({...ptFormData, nameAr: e.target.value})} />
+              </div>
+              <div className="flex gap-2 justify-end pt-4">
+                <Button variant="outline" onClick={() => setShowPtForm(false)}>{t.adminCancel}</Button>
+                <Button onClick={handleSavePt}>{t.settingsSave}</Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* FAQ Modal */}
+        {showFAQForm && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-auto">
+            <div className="bg-card rounded-xl p-6 w-full max-w-lg space-y-4 border border-border">
+              <h3 className="font-bold text-foreground text-lg">{t.adminTabFAQs}</h3>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">Category</label>
+                <Input value={faqFormData.category} onChange={e => setFaqFormData({...faqFormData, category: e.target.value})} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">Question (EN)</label>
+                <Input value={faqFormData.qEn} onChange={e => setFaqFormData({...faqFormData, qEn: e.target.value})} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">Question (AR)</label>
+                <Input value={faqFormData.qAr} onChange={e => setFaqFormData({...faqFormData, qAr: e.target.value})} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">Answer (EN)</label>
+                <textarea className="w-full bg-muted/20 border border-border rounded-lg p-2 text-sm" rows={3} value={faqFormData.aEn} onChange={e => setFaqFormData({...faqFormData, aEn: e.target.value})} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">Answer (AR)</label>
+                <textarea className="w-full bg-muted/20 border border-border rounded-lg p-2 text-sm" rows={3} value={faqFormData.aAr} onChange={e => setFaqFormData({...faqFormData, aAr: e.target.value})} />
+              </div>
+              <div className="flex gap-2 justify-end pt-4">
+                <Button variant="outline" onClick={() => setShowFAQForm(false)}>{t.adminCancel}</Button>
+                <Button onClick={handleSaveFAQ}>{t.settingsSave}</Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Content Page Modal */}
+        {showContentForm && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-auto">
+            <div className="bg-card rounded-xl p-6 w-full max-w-2xl space-y-4 border border-border">
+              <h3 className="font-bold text-foreground text-lg">{t.adminTabContent}</h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">Slug (e.g. terms)</label>
+                  <Input value={contentFormData.slug} onChange={e => setContentFormData({...contentFormData, slug: e.target.value})} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">Title (EN)</label>
+                  <Input value={contentFormData.titleEn} onChange={e => setContentFormData({...contentFormData, titleEn: e.target.value})} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-muted-foreground">Title (AR)</label>
+                  <Input value={contentFormData.titleAr} onChange={e => setContentFormData({...contentFormData, titleAr: e.target.value})} />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">Content (EN) - Markdown supported</label>
+                <textarea className="w-full bg-muted/20 border border-border rounded-lg p-2 text-sm font-mono" rows={8} value={contentFormData.contentEn} onChange={e => setContentFormData({...contentFormData, contentEn: e.target.value})} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">Content (AR) - Markdown supported</label>
+                <textarea className="w-full bg-muted/20 border border-border rounded-lg p-2 text-sm font-mono text-right" dir="rtl" rows={8} value={contentFormData.contentAr} onChange={e => setContentFormData({...contentFormData, contentAr: e.target.value})} />
+              </div>
+              <div className="flex gap-2 justify-end pt-4">
+                <Button variant="outline" onClick={() => setShowContentForm(false)}>{t.adminCancel}</Button>
+                <Button onClick={handleSaveContent}>{t.settingsSave}</Button>
               </div>
             </div>
           </div>
