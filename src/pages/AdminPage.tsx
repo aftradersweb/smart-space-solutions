@@ -663,12 +663,22 @@ const AdminPage = () => {
     if (!spaceFormData.name) return;
     
     const spaceData = {
-      name_en: spaceFormData.name,
-      name_ar: spaceFormData.nameAr,
+      name_en: spaceFormData.name.trim(),
+      name_ar: spaceFormData.nameAr.trim() || spaceFormData.name.trim(),
       storage_type_id: spaceFormData.type,
-      capacity: parseFloat(spaceFormData.capacity) || 0,
-      capacity_units: parseInt(spaceFormData.capacityUnits) || 0,
+      capacity: Math.max(0, parseFloat(spaceFormData.capacity) || 0),
+      capacity_units: Math.max(0, parseInt(spaceFormData.capacityUnits) || 0),
     };
+
+    if (!spaceData.name_en) {
+      toast({ title: "Name is required", variant: "destructive" });
+      return;
+    }
+    
+    if (!spaceData.storage_type_id) {
+      toast({ title: "Storage type is required", variant: "destructive" });
+      return;
+    }
 
     if (editingSpace) {
       const { error } = await supabase
@@ -739,18 +749,23 @@ const AdminPage = () => {
       return;
     }
 
+    if (!pricingFormData.nameEn.trim()) {
+      toast({ title: "English name is required", variant: "destructive" });
+      return;
+    }
+
     const data = {
-      name_en: pricingFormData.nameEn,
-      name_ar: pricingFormData.nameAr,
-      slug: pricingFormData.slug || pricingFormData.nameEn.toLowerCase().replace(/\s+/g, '-'),
-      description_en: pricingFormData.descriptionEn,
-      description_ar: pricingFormData.descriptionAr,
-      price_per_sqm_month: parseFloat(pricingFormData.price) || 0,
-      min_area: parseFloat(pricingFormData.minArea) || 0,
-      min_duration_months: parseInt(pricingFormData.minDuration) || 1,
+      name_en: pricingFormData.nameEn.trim(),
+      name_ar: pricingFormData.nameAr.trim() || pricingFormData.nameEn.trim(),
+      slug: pricingFormData.slug.trim() || pricingFormData.nameEn.trim().toLowerCase().replace(/\s+/g, '-'),
+      description_en: pricingFormData.descriptionEn.trim(),
+      description_ar: pricingFormData.descriptionAr.trim(),
+      price_per_sqm_month: Math.max(0, parseFloat(pricingFormData.price) || 0),
+      min_area: Math.max(0, parseFloat(pricingFormData.minArea) || 0),
+      min_duration_months: Math.max(1, parseInt(pricingFormData.minDuration) || 1),
       billing_unit: pricingFormData.billingUnit,
-      unit_name_en: pricingFormData.unitEn,
-      unit_name_ar: pricingFormData.unitAr,
+      unit_name_en: pricingFormData.unitEn.trim(),
+      unit_name_ar: pricingFormData.unitAr.trim(),
       measurement_config: mConfig
     };
 
@@ -1232,8 +1247,6 @@ const AdminPage = () => {
           ))}
         </div>
         <PaginationControls totalItems={spaces.length} currentPage={currentPage} setCurrentPage={setCurrentPage} />
-        {SpaceFormModal()}
-        {PricingFormModal()}
       </div>
     );
   };
@@ -1926,6 +1939,9 @@ const AdminPage = () => {
           {tab === "users" && UsersContent()}
           {tab === "settings" && SettingsContent()}
         </main>
+
+        {SpaceFormModal()}
+        {PricingFormModal()}
         {/* Confirmation Dialog */}
         {confirmAction && (
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setConfirmAction(null)}>
